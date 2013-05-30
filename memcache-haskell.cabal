@@ -1,0 +1,40 @@
+Name:           memcache-haskell
+Version:        0.0.1
+Description:    Memcached
+License:        OtherLicense
+Author:         Kiyoshi Ikehara
+Maintainer:     Kiyoshi Ikehara
+Build-Type:     Simple
+Cabal-Version:  >=1.8
+
+Library
+  Ghc-Options:     -O2 -Wall
+  Build-Depends:   base >=4 && <5
+                 , bytestring
+                 , network >= 2.3.2
+                 , split
+  Hs-source-dirs:  src
+  Exposed-modules: Network.Memcache
+                 , Network.Memcache.Response
+                 , Network.Memcache.Op
+                 , Network.Memcache.Message
+                 , Network.Memcache.Client
+                 , Network.Memcache.Stats
+                 , Network.Memcache.Util
+  Extensions:      DeriveDataTypeable
+
+Test-Suite test-memcache
+  Ghc-Options:     -O2
+  Build-depends:   base
+                 , bytestring
+                 , network >= 2.3.2
+                 , split
+                 , QuickCheck == 2.5.1.1
+                 , HUnit
+                 , test-framework
+                 , test-framework-th
+                 , test-framework-hunit
+                 , test-framework-quickcheck2
+  Type:            exitcode-stdio-1.0
+  Hs-source-dirs:  test, src
+  Main-is:         test-memcache.hs
