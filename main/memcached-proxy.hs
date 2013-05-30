@@ -15,8 +15,8 @@ main = do
     
 proxyLoop :: AppData IO -> AppData IO -> IO ()
 proxyLoop serverData clientData = do
-  (serverSource, ()) <- (appSource serverData $= parseText) $$+ return ()
-  (clientSource, ()) <- (appSource clientData $= parseResponse) $$+ return ()
+  (serverSource, ()) <- (appSource serverData $= getOpText) $$+ return ()
+  (clientSource, ()) <- (appSource clientData $= getResponseText) $$+ return ()
   loop serverSource (appSink serverData) clientSource (appSink clientData)
   where
     loop serverSource serverSink clientSource clientSink = do
@@ -25,11 +25,11 @@ proxyLoop serverData clientData = do
       case mop of
         Nothing -> return ()
         Just op -> do
-          yield op $$ (opText =$ clientSink)
+          yield op $$ (putOpText =$ clientSink)
           (clientSource', mresp) <- clientSource $$++ await
           case mresp of
             Nothing -> return ()
             Just resp -> do
-              yield resp $$ (responseText =$ serverSink)
+              yield resp $$ (putResponseText =$ serverSink)
               loop serverSource' serverSink clientSource' clientSink
 

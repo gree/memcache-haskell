@@ -22,9 +22,9 @@ main = do
   ht <- H.new
   runTCPServer (serverSettings 13301 HostAny) $ \appData -> do
     (appSource appData)
-      $$ parseText
+      $$ getOpText
       =$ process ht
-      =$ responseText
+      =$ putResponseText
       =$ (appSink appData)
 
 process :: MonadIO m => HashTable Key Value -> ConduitM Op Response m ()

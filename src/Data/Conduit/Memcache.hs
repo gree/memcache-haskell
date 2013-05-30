@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Data.Conduit.Memcache (parseText, parseResponse, opText, responseText) where
+module Data.Conduit.Memcache (getOpText, getResponseText, putOpText, putResponseText) where
 
 import Control.Monad.Trans
 -- import Control.Monad.IO.Class
@@ -15,11 +15,11 @@ import Data.Conduit.Attoparsec
 import Network.Memcache.Op
 import Network.Memcache.Response
 
-parseText :: (MonadIO m, MonadThrow m) => ConduitM C.ByteString Op m ()
-parseText = parseText' =$= removePR
+getOpText :: (MonadIO m, MonadThrow m) => ConduitM C.ByteString Op m ()
+getOpText = getOpText' =$= removePR
 
-parseText' :: (MonadIO m, MonadThrow m) => ConduitM C.ByteString (PositionRange, Op) m ()
-parseText' = conduitParser command
+getOpText' :: (MonadIO m, MonadThrow m) => ConduitM C.ByteString (PositionRange, Op) m ()
+getOpText' = conduitParser command
   where
     command :: Parser Op
     command = do
@@ -46,11 +46,11 @@ removePR = do
       yield r
       removePR
 
-parseResponse :: (MonadIO m, MonadThrow m) => ConduitM C.ByteString Response m ()
-parseResponse = parseResponse' =$= removePR
+getResponseText :: (MonadIO m, MonadThrow m) => ConduitM C.ByteString Response m ()
+getResponseText = getResponseText' =$= removePR
 
-parseResponse' :: (MonadIO m, MonadThrow m) => ConduitM C.ByteString (PositionRange, Response) m ()
-parseResponse' = conduitParser response
+getResponseText' :: (MonadIO m, MonadThrow m) => ConduitM C.ByteString (PositionRange, Response) m ()
+getResponseText' = conduitParser response
   where
     response :: Parser Response
     response = do
@@ -64,23 +64,23 @@ parseResponse' = conduitParser response
         Nothing -> return (Error)
   
 
-responseText :: MonadIO m => ConduitM Response C.ByteString m ()
-responseText = do
+putResponseText :: MonadIO m => ConduitM Response C.ByteString m ()
+putResponseText = do
   mResp <- await
   case mResp of
     Nothing -> return ()
     Just resp -> do
       mapM_ yield $ Network.Memcache.Response.toChunks resp
-      responseText
+      putResponseText
 
-opText :: MonadIO m => ConduitM Op C.ByteString m ()
-opText = do
+putOpText :: MonadIO m => ConduitM Op C.ByteString m ()
+putOpText = do
   mOp <- await
   case mOp of
     Nothing -> return ()
     Just op -> do
       mapM_ yield $ Network.Memcache.Op.toChunks op
-      opText
+      putOpText
 
 ----
 
