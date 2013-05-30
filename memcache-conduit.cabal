@@ -14,11 +14,11 @@ Library
                  , network >= 2.3.2
                  , split
                  , mtl
-                 , memcache-haskell
                  , conduit
                  , attoparsec
                  , attoparsec-binary
                  , attoparsec-conduit
+                 , memcache-haskell
   Hs-source-dirs:  src
   Exposed-modules: Data.Conduit.Memcache
   Extensions:      DeriveDataTypeable
@@ -38,4 +38,19 @@ Executable hemcached
                  , memcache-conduit
   Hs-source-dirs:  main
   Main-is:         hemcached.hs
+  Extensions:      DeriveDataTypeable
+
+Executable memcached-proxy
+  Ghc-Options:     -threaded -O2 -Wall -rtsopts
+  Extra-Libraries: 
+  Build-Depends:   base >= 4 && < 5, bytestring >= 0.9, stm >= 2.4, containers
+                 , transformers
+                 , resourcet
+                 , mtl
+                 , conduit
+                 , network-conduit
+                 , memcache-haskell
+                 , memcache-conduit
+  Hs-source-dirs:  main
+  Main-is:         memcached-proxy.hs
   Extensions:      DeriveDataTypeable
