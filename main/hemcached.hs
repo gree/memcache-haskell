@@ -7,7 +7,7 @@ import Control.Monad.Trans
 import qualified Data.ByteString.Char8 as BS
 import Data.Conduit
 import Data.Conduit.Network
-import Data.Conduit.Memcache hiding (process)
+import Data.Conduit.Memcache
 import qualified Data.HashTable.IO as H
 import Network.Memcache.Op
 import Network.Memcache.Response
@@ -24,7 +24,7 @@ main = do
     (appSource appData)
       $$ parseText
       =$ process ht
-      =$ response
+      =$ responseText
       =$ (appSink appData)
 
 process :: MonadIO m => HashTable Key Value -> ConduitM Op Response m ()

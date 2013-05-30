@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Data.Conduit.Memcache (parseText, process, response) where
+module Data.Conduit.Memcache (parseText, responseText) where
 
 import Control.Monad.Trans
 -- import Control.Monad.IO.Class
@@ -45,29 +45,15 @@ parseText'' = do
     Just (_, op) -> do
       yield op
       parseText''
-      
-process :: MonadIO m => (Op -> IO Response) -> ConduitM Op Response m ()
-process exec = do
-  mOpType <- await
-  case mOpType of
-    Nothing -> return ()
-    Just op -> case op of
-      QuitOp -> do
-        yield Ok
-        return ()
-      _ -> do
-        resp <- liftIO $ exec op
-        yield resp
-        process exec
 
-response :: MonadIO m => ConduitM Response C.ByteString m ()
-response = do
+responseText :: MonadIO m => ConduitM Response C.ByteString m ()
+responseText = do
   mResp <- await
   case mResp of
     Nothing -> return ()
     Just resp -> do
       mapM_ yield $ Network.Memcache.Response.toChunks resp
-      response
+      responseText
 
 ----
 
