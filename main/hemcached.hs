@@ -7,7 +7,7 @@ import Control.Monad.Trans
 import qualified Data.ByteString.Char8 as BS
 import Data.Conduit
 import Data.Conduit.Network
-import Data.Conduit.Memcache
+import Data.Conduit.Memcache hiding (process)
 import qualified Data.HashTable.IO as H
 import Network.Memcache.Op
 import Network.Memcache.Response
@@ -23,19 +23,36 @@ main = do
   runTCPServer (serverSettings 13301 HostAny) $ \appData -> do
     (appSource appData)
       $$ parseText
-      =$ process (memStore ht)
+      =$ process ht
       =$ response
       =$ (appSink appData)
 
-memStore :: HashTable Key Value -> Op -> IO (Response)
-memStore ht op = case op of
-  SetOp key flags exptime bytes value options -> do
-    H.insert ht key value
-    return (Stored)
-  GetOp (key:keys) -> do
-    mValue <- H.lookup ht key
-    case mValue of
-      Just value -> return (Value key 0 (fromIntegral $ BS.length value) value (Just 0))
-      Nothing -> return (Error)
-  _ -> return (Error)
-
+process :: MonadIO m => HashTable Key Value -> ConduitM Op Response m ()
+process ht = do
+  mOpType <- await
+  case mOpType of
+    Nothing -> return ()
+    Just op -> case op of
+      QuitOp -> do
+        return ()
+      SetOp key flags exptime bytes value options -> do
+        liftIO $ H.insert ht key value
+        yield (Stored)
+        process ht
+      GetOp keys -> do
+        processGet keys
+        yield (End)
+        process ht
+      _ -> do
+        yield (Error)
+        process ht
+  where
+    processGet [] = return ()
+    processGet (key:rest) = do
+        mValue <- liftIO $ H.lookup ht key
+        case mValue of
+          Just value -> yield (Value key 0 (fromIntegral $ BS.length value) value (Just 0))
+          Nothing -> return ()
+        processGet rest
+      
+  
