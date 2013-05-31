@@ -1,17 +1,25 @@
 
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
+import Control.Exception
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Control
 import Data.Conduit
-import Data.Conduit.Network
+import Data.Conduit.Network hiding (runTCPClient)
+import Data.Conduit.Network.Internal
 import Data.Conduit.Memcache
+import Network.Socket
 
 
 main :: IO ()
 main = do
-  runTCPServer (serverSettings 13302 HostAny) $ \appData -> do
-    runTCPClient (clientSettings 13301 "ckvs1001") (proxyLoop appData)
+  let sSettings0 = (serverSettings 13302 HostAny) :: ServerSettings IO
+      sSettings = sSettings0  { serverAfterBind = (\s -> setSocketOption s NoDelay 1) }
+  runTCPServer sSettings $ \appData -> do
+    runTCPClient (clientSettings 13301 "127.0.0.1") (proxyLoop appData)
     
 proxyLoop :: AppData IO -> AppData IO -> IO ()
 proxyLoop serverData clientData = do
@@ -21,7 +29,6 @@ proxyLoop serverData clientData = do
   where
     loop serverSource serverSink clientSource clientSink = do
       (serverSource', mop) <- serverSource $$++ await
-      print mop
       case mop of
         Nothing -> return ()
         Just op -> do
@@ -33,3 +40,14 @@ proxyLoop serverData clientData = do
               yield resp $$ (putResponseText =$ serverSink)
               loop serverSource' serverSink clientSource' clientSink
 
+runTCPClient :: (MonadIO m, MonadBaseControl IO m) => ClientSettings m -> Application m -> m ()
+runTCPClient settings app = control $ \run -> bracket
+    (getSocket (clientHost settings) (clientPort settings))
+    (sClose . fst)
+    (\(s, address) -> do
+        setSocketOption s NoDelay 1
+        run $ app AppData { appSource = sourceSocket s
+                          , appSink = sinkSocket s
+                          , appSockAddr = address
+                          , appLocalAddr = Nothing
+                          })

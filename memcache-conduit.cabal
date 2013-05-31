@@ -47,7 +47,9 @@ Executable memcached-proxy
                  , transformers
                  , resourcet
                  , mtl
+                 , network
                  , conduit
+                 , monad-control
                  , network-conduit
                  , memcache-haskell
                  , memcache-conduit
