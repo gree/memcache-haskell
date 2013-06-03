@@ -57,7 +57,7 @@ process ht = do
         yield' op Error
         process ht
   where
-    yield' op resp = if isNoreplyOp op then yield resp else return ()
+    yield' op resp = if isNoreplyOp op then return () else yield resp
     
     processGet [] = return ()
     processGet (key:rest) = do
