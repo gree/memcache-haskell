@@ -31,24 +31,27 @@ import Data.List.Split
 
 import Network.Memcache.Client
 
+{-|
+  get any stats value as a string
+-}
 getValue :: String -> StatsList -> Maybe String
 getValue key statsList = lookup key statsList
 
 {-|
-  pid
+  pid (32u)
 -}
 getPid :: StatsList -> Maybe Word32
 getPid = getValueAs "pid"
 
 {-|
-  uptime
+  uptime (32u)
 -}
 getUptime :: StatsList -> Maybe Word32
 getUptime = getValueAs "uptime"
 
 {-|
   time (32u)
-  unit time
+  unix time
 -}
 getTime :: StatsList -> Maybe Word32
 getTime = getValueAs "time"
@@ -104,19 +107,19 @@ getBytes :: StatsList -> Maybe Word64
 getBytes = getValueAs "bytes"
 
 {-|
-  curr_connections
+  curr_connections (32u)
 -}
 getCurrConnections :: StatsList -> Maybe Word32
 getCurrConnections = getValueAs "curr_connections"
 
 {-|
-  total_connections
+  total_connections (32u)
 -}
 getTotalConnections :: StatsList -> Maybe Word32
 getTotalConnections = getValueAs "total_connections"
 
 {-|
-  connection_structures
+  connection_structures (32u)
 -}
 getConnectionStructures :: StatsList -> Maybe Word32
 getConnectionStructures = getValueAs "connection_structures"

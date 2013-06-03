@@ -20,8 +20,10 @@ module Network.Memcache.Response (
       , Version
       , Code
       , Stat)
+  , parseResponse
   , parseResponseHeader
   , responseParser
+  , responseHeaderParser
   , toChunks) where
 
 import Prelude hiding (takeWhile, take)
@@ -32,7 +34,11 @@ import qualified Data.Attoparsec.ByteString.Lazy as AL
 import Control.Applicative
 import Data.Char
 
+import Debug.Trace
 
+{-|
+  response messages from memcached server
+-}
 data Response =
     Ok
   | Value {
@@ -58,92 +64,89 @@ data Response =
   | Code Word64
   deriving (Show, Eq)
 
--- parser by attoparsec
-
+{-|
+  response parser by attoparsec
+-}
 responseParser :: Parser Response
-responseParser = do
-  cmd <- skipWhile (== ' ') *> try (takeWhile (\c -> isAscii c && Data.Attoparsec.ByteString.Char8.isDigit c))
-  case cmd of
-    "VALUE"        -> do
-        key     <- skipWhile (== ' ') *> AL.takeWhile (\c -> c /= 0x20 && not (isEndOfLine c)) 
-        flags   <- skipWhile (== ' ') *> decimal
-        len     <- skipWhile (== ' ') *> decimal
-        version <- skipWhile (== ' ') *> (try (fmap Just decimal) <|> return (Nothing) <* skipWhile (== ' ')) <* endline
-        value   <- take len <* endline
-        return (Value key flags (fromIntegral len) value version)
-    "END"          -> pure End
-    "STORED"       -> pure Stored
-    "NOT_STORED"   -> pure NotStored
-    "EXISTS"       -> pure Exists
-    "NOT_FOUND"    -> pure NotFound
-    "DELETED"      -> pure Deleted
-    "OK"           -> pure Ok
-    "FOUND"        -> pure Found
-    "TOUCHED"      -> pure Touched
-    "ERROR"        -> pure Error
-    "SERVER_ERROR" -> ServerError <$> (skipWhile (== ' ') *> fmap BS.unpack (AL.takeTill isEndOfLine))
-    "CLIENT_ERROR" -> ClientError <$> (skipWhile (== ' ') *> fmap BS.unpack (AL.takeTill isEndOfLine))
-    "STAT"         -> Stat
-                      <$> (skipWhile (== ' ') *> takeWhile (/= ' '))
-                      <*> AL.takeTill isEndOfLine
-    "VERSION"      -> Version <$> (skipWhile (== ' ') *> AL.takeTill isEndOfLine)
-    _              -> Code <$> decimal
+responseParser = responseParser' False
+
+{-|
+  response header parser by attoparsec
+-}
+responseHeaderParser :: Parser Response
+responseHeaderParser = responseParser' True
+
+responseParser' :: Bool -> Parser Response
+responseParser' onlyHeader = try commandParser <|> codeParser
   where
+    commandParser :: Parser Response
+    commandParser = do
+      cmd <- skipWhile (== ' ') *> takeWhile (\c -> isAlphaNum c || c == '_')
+      resp <- case {- trace ("cmd: " ++ show cmd) -} cmd of
+        "VALUE"        -> do
+          key     <- skipWhile (== ' ') *> takeWhile (\c -> c /= ' ')
+          flags   <- skipWhile (== ' ') *> decimal
+          len     <- skipWhile (== ' ') *> decimal
+          version <- skipWhile (== ' ') *> try (fmap Just decimal) <|> return (Nothing) <* skipWhile (== ' ')
+          if onlyHeader
+            then do
+              return (Value key flags (fromIntegral len) "" version)
+            else do
+              value <- endline *> take len
+              return (Value key flags (fromIntegral len) value version)
+        "END"          -> pure End
+        "STORED"       -> pure Stored
+        "NOT_STORED"   -> pure NotStored
+        "EXISTS"       -> pure Exists
+        "NOT_FOUND"    -> pure NotFound
+        "DELETED"      -> pure Deleted
+        "OK"           -> pure Ok
+        "FOUND"        -> pure Found
+        "TOUCHED"      -> pure Touched
+        "ERROR"        -> pure Error
+        "SERVER_ERROR" -> ServerError <$> (skipWhile (== ' ') *> fmap BS.unpack (AL.takeTill isEndOfLine))
+        "CLIENT_ERROR" -> ClientError <$> (skipWhile (== ' ') *> fmap BS.unpack (AL.takeTill isEndOfLine))
+        "STAT"         -> Stat
+                          <$> (skipWhile (== ' ') *> takeWhile (/= ' '))
+                          <*> AL.takeTill isEndOfLine
+        "VERSION"      -> Version <$> (skipWhile (== ' ') *> AL.takeTill isEndOfLine)
+        _              -> fail $ "unknown command " ++ BS.unpack cmd
+      _ <- endline
+      return (resp)
+
+    codeParser :: Parser Response
+    codeParser = Code <$> (skipWhile (== ' ') *> decimal <* skipWhile (== ' ') <* endline)
+    
     endline :: Parser BS.ByteString
     endline = try (string "\r\n") <|> string "\n" <|> string "\r"
 
--- parse response header
+{-|
+  parse a response
+-}
+parseResponse :: BS.ByteString -> Maybe Response
+parseResponse = parseResponse' False
+
+{-|
+  parse a response but only its header
+-}
 parseResponseHeader :: BS.ByteString -> Maybe Response
-parseResponseHeader headerLine = 
-  case filter (\x -> not (BS.null x)) (BS.split ' ' headerLine) of
-    [] -> Nothing
-    (code:args) -> parseResponseHeader' code args
+parseResponseHeader = parseResponse' True
 
-parseResponseHeader' :: BS.ByteString -> [BS.ByteString] -> Maybe Response
-parseResponseHeader' code args = case code of
-  "VALUE"        -> case parseValueArgs args of
-    Just (key, flags, len, version) -> Just $ Value key flags len (BS.pack "") version
-    Nothing -> Nothing
-  "END"          -> Just End
-  "STORED"       -> Just Stored
-  "NOT_STORED"   -> Just NotStored
-  "EXISTS"       -> Just Exists
-  "NOT_FOUND"    -> Just NotFound
-  "DELETED"      -> Just Deleted
-  "OK"           -> Just Ok
-  "FOUND"        -> Just Found
-  "TOUCHED"      -> Just Touched
-  "ERROR"        -> Just Error
-  "SERVER_ERROR" -> Just $ ServerError $ BS.unpack $ BS.intercalate " " args
-  "CLIENT_ERROR" -> Just $ ClientError $ BS.unpack $ BS.intercalate " " args
-  "STAT"         -> case args of
-    (statName:statValue) -> Just $ Stat (statName) (BS.intercalate " " statValue)
-    _ -> Nothing
-  "VERSION"      -> case args of
-    (version:[]) -> Just $ Version (version)
-    _ -> Nothing
-  _ -> case readNum code of
-    Just c -> Just $ Code c
-    Nothing -> Nothing
+parseResponse' :: Bool -> BS.ByteString -> Maybe Response
+parseResponse' onlyHeader input = let r = parse (responseParser' onlyHeader) input in case r of
+  Fail {} -> Nothing
+  Partial parse' -> let r' = parse' "\r\n" in case r' of
+    Done _ result -> Just result
+    Fail {} -> Nothing
+    Partial {} -> Nothing
+--      let r'' = feed r' "" in case trace (show r'') r'' of
+--        Done _ result -> Just result
+--        _ -> Nothing
+  Done _ result -> Just result
 
-
-parseValueArgs :: [BS.ByteString] -> Maybe (BS.ByteString, Word32, Word64, Maybe Word64)
-parseValueArgs (key:f:l:rest) = do
-  flags <- readNum f
-  len <- readNum l
-  case rest of
-    []     -> return (key, flags, len, Nothing) 
-    (v:[]) -> do
-      version <- readNum v
-      return (key, flags, len, Just version) 
-    _      -> Nothing
-parseValueArgs _ = Nothing
-
-readNum :: (Num a) => BS.ByteString -> Maybe a
-readNum x = case BS.readInteger x of
-  Just (v, rest) -> if BS.null rest then Just $ fromInteger v else Nothing
-  Nothing -> Nothing
-
+{-|
+  convert a response to bytestring chunks
+-}
 toChunks :: Response -> [BS.ByteString]
 toChunks result = case result of
   Ok        -> ["OK", ln]

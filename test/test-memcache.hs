@@ -19,6 +19,7 @@ import Test.QuickCheck
 import Test.QuickCheck.Arbitrary
 
 import Network.Memcache.Op
+import qualified Network.Memcache.Response as R
 
 import Debug.Trace
 
@@ -220,6 +221,49 @@ prop_parseOpHeader_QuitOp = parseOpHeader "quit" == Just (QuitOp)
 
 prop_parseOpHeader_StatsOp :: [PrintableString] -> Bool
 prop_parseOpHeader_StatsOp stats = parseOpHeader (BS.pack $ "stats" ++ concat (map (\s -> " " ++ getPrintableString s) stats)) == Just (StatsOp (map getPrintableString stats))
+
+--------------------------------
+
+prop_toChunks_Value :: Key -> Word32 -> ValueT -> Maybe Word64 -> Bool
+prop_toChunks_Value key flag value version = chunk2string (R.toChunks $ R.Value key' flag len value version) == resp
+  where
+    len = fromIntegral $ BS.length value
+    key' = getKey key
+    resp = "VALUE " ++ BS.unpack key' ++ " " ++ show flag ++ " "++ show len ++ showVersion version ++ ln ++ BS.unpack value ++ ln
+    showVersion version = case version of
+      Just v -> " " ++ show v
+      Nothing -> ""
+
+prop_toChunks_Ok :: Bool
+prop_toChunks_Ok = chunk2string (R.toChunks R.Ok) == "OK" ++ ln
+
+--------------------------------
+
+prop_parseResponseHeader_Value :: Key -> Word32 -> Word64 -> Maybe Word64 -> Bool
+prop_parseResponseHeader_Value key flags len version = response == Just (R.Value key' flags len "" version)
+  where
+    response = R.parseResponseHeader input
+    input = BS.pack $ "VALUE " ++ BS.unpack key' ++ " " ++ show flags ++ " " ++ show len ++ versionPart version
+    key' = getKey key
+    versionPart version = case version of
+      Just v -> " " ++ show v
+      Nothing -> ""
+
+prop_parseResponseHeader_Ok :: Bool
+prop_parseResponseHeader_Ok = R.parseResponseHeader "OK" == Just (R.Ok)
+
+prop_parseResponseHeader_ServerError :: PrintableString -> Bool
+prop_parseResponseHeader_ServerError msg = R.parseResponseHeader (BS.pack $ "SERVER_ERROR " ++ msg' ++ "\r\n") == Just (R.ServerError msg')
+  where
+    msg' = getPrintableString msg
+
+prop_parseResponseHeader_ClientError :: PrintableString -> Bool
+prop_parseResponseHeader_ClientError msg = R.parseResponseHeader (BS.pack $ "CLIENT_ERROR " ++ msg' ++ "\r\n") == Just (R.ClientError msg')
+  where
+    msg' = getPrintableString msg
+
+prop_parseResponseHeader_Code :: Word64 -> Bool
+prop_parseResponseHeader_Code code = R.parseResponseHeader (BS.pack $ show code) == Just (R.Code code)
 
 ----------------------------------------------------------------
 
