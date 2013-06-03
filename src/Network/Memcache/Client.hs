@@ -23,7 +23,8 @@ import System.IO
 import Network
 import Data.List.Split
 import Control.Exception
-import qualified Data.ByteString.Char8 as C
+import qualified Data.ByteString.Char8 as BS
+import Control.Monad.IO.Class
 
 import Network.Memcache.Op
 import Network.Memcache.Response
@@ -53,7 +54,7 @@ closeClient client = do
   where
     closeClient' = do
       let hSocket = clientSocket client
-      C.hPutStr hSocket $ C.pack "quit\r\n"
+      BS.hPutStr hSocket $ BS.pack "quit\r\n"
       hFlush hSocket
       return ()
 
@@ -114,9 +115,9 @@ statsWithArgs client args = do
     getResponse sock result = do
       resp <- recv sock
       case resp of
-        Just (Stat statName statValue) -> getResponse sock ((statName, statValue):result)
+        Just (Stat statName statValue) -> getResponse sock ((BS.unpack statName, BS.unpack statValue):result)
         Just End -> return (result)
-        _ ->  getResponse sock result
+        _ -> getResponse sock result
 
 ----------------------------------------------------------------
 

@@ -23,16 +23,24 @@ module Network.Memcache.Response (
   , parseResponseHeader
   , toChunks) where
 
-import qualified Data.ByteString.Char8 as C
+import Prelude hiding (takeWhile, take)
+import qualified Data.ByteString.Char8 as BS
 import Data.Word
+import Data.Attoparsec.ByteString.Char8
+import qualified Data.Attoparsec.ByteString as AB
+import qualified Data.Attoparsec.ByteString.Lazy as AL
+import Control.Applicative
+import Data.Char
 
-data Response = Ok
+
+data Response =
+    Ok
   | Value {
-      resKey     :: C.ByteString
-    , resFlag    :: Word16
+      resKey     :: BS.ByteString
+    , resFlag    :: Word32
     , resLen     :: Word64
-    , resValue   :: C.ByteString
-    , resVersion :: (Maybe Word64) -- Value key flag value
+    , resValue   :: BS.ByteString
+    , resVersion :: Maybe Word64 -- Value key flag value
     }
   | End
   | Stored
@@ -45,22 +53,58 @@ data Response = Ok
   | Error
   | ServerError String
   | ClientError String
-  | Version String
-  | Stat String String -- name and value pair
+  | Version BS.ByteString
+  | Stat BS.ByteString BS.ByteString -- name and value pair
   | Code Word64
   deriving (Show, Eq)
 
+-- parser by attoparsec
+
+responseParser :: Parser Response
+responseParser = do
+  cmd <- skipWhile (== ' ') *> try (takeWhile (\c -> isAscii c && Data.Attoparsec.ByteString.Char8.isDigit c))
+  case cmd of
+    "VALUE"        -> do
+        key     <- skipWhile (== ' ') *> AL.takeWhile (\c -> c /= 0x20 && not (isEndOfLine c)) 
+        flags   <- skipWhile (== ' ') *> decimal
+        len     <- skipWhile (== ' ') *> decimal
+        version <- skipWhile (== ' ') *> try (fmap Just decimal) <|> return (Nothing) <* skipWhile (== ' ')
+        endline
+        value   <- take len
+        endline
+        return (Value key flags (fromIntegral len) value version)
+    "END"          -> pure End
+    "STORED"       -> pure Stored
+    "NOT_STORED"   -> pure NotStored
+    "EXISTS"       -> pure Exists
+    "NOT_FOUND"    -> pure NotFound
+    "DELETED"      -> pure Deleted
+    "OK"           -> pure Ok
+    "FOUND"        -> pure Found
+    "TOUCHED"      -> pure Touched
+    "ERROR"        -> pure Error
+    "SERVER_ERROR" -> ServerError <$> (skipWhile (== ' ') *> fmap BS.unpack (AL.takeTill isEndOfLine))
+    "CLIENT_ERROR" -> ClientError <$> (skipWhile (== ' ') *> fmap BS.unpack (AL.takeTill isEndOfLine))
+    "STAT"         -> Stat
+                      <$> (skipWhile (== ' ') *> takeWhile (/= ' '))
+                      <*> AL.takeTill isEndOfLine
+    "VERSION"      -> Version <$> (skipWhile (== ' ') *> AL.takeTill isEndOfLine)
+    _              -> Code <$> decimal
+  where
+    endline :: Parser BS.ByteString
+    endline = try (string "\r\n") <|> string "\n" <|> string "\r"
+
 -- parse response header
-parseResponseHeader :: C.ByteString -> Maybe Response
+parseResponseHeader :: BS.ByteString -> Maybe Response
 parseResponseHeader headerLine = 
-  case filter (\x -> not (C.null x)) (C.split ' ' headerLine) of
+  case filter (\x -> not (BS.null x)) (BS.split ' ' headerLine) of
     [] -> Nothing
     (code:args) -> parseResponseHeader' code args
 
-parseResponseHeader' :: C.ByteString -> [C.ByteString] -> Maybe Response
+parseResponseHeader' :: BS.ByteString -> [BS.ByteString] -> Maybe Response
 parseResponseHeader' code args = case code of
   "VALUE"        -> case parseValueArgs args of
-    Just (key, flags, len, version) -> Just $ Value key flags len (C.pack "") version
+    Just (key, flags, len, version) -> Just $ Value key flags len (BS.pack "") version
     Nothing -> Nothing
   "END"          -> Just End
   "STORED"       -> Just Stored
@@ -72,19 +116,20 @@ parseResponseHeader' code args = case code of
   "FOUND"        -> Just Found
   "TOUCHED"      -> Just Touched
   "ERROR"        -> Just Error
-  "SERVER_ERROR" -> Just $ ServerError $ C.unpack $ C.intercalate " " args
-  "CLIENT_ERROR" -> Just $ ClientError $ C.unpack $ C.intercalate " " args
+  "SERVER_ERROR" -> Just $ ServerError $ BS.unpack $ BS.intercalate " " args
+  "CLIENT_ERROR" -> Just $ ClientError $ BS.unpack $ BS.intercalate " " args
   "STAT"         -> case args of
-    (statName:statValue) -> Just $ Stat (C.unpack statName) (C.unpack $ C.intercalate " " statValue)
+    (statName:statValue) -> Just $ Stat (statName) (BS.intercalate " " statValue)
     _ -> Nothing
   "VERSION"      -> case args of
-    (version:[]) -> Just $ Version (C.unpack version)
+    (version:[]) -> Just $ Version (version)
     _ -> Nothing
   _ -> case readNum code of
     Just c -> Just $ Code c
     Nothing -> Nothing
 
-parseValueArgs :: [C.ByteString] -> Maybe (C.ByteString, Word16, Word64, Maybe Word64)
+
+parseValueArgs :: [BS.ByteString] -> Maybe (BS.ByteString, Word32, Word64, Maybe Word64)
 parseValueArgs (key:f:l:rest) = do
   flags <- readNum f
   len <- readNum l
@@ -96,16 +141,16 @@ parseValueArgs (key:f:l:rest) = do
     _      -> Nothing
 parseValueArgs _ = Nothing
 
-readNum :: (Num a) => C.ByteString -> Maybe a
-readNum x = case C.readInteger x of
-  Just (v, rest) -> if C.null rest then Just $ fromInteger v else Nothing
+readNum :: (Num a) => BS.ByteString -> Maybe a
+readNum x = case BS.readInteger x of
+  Just (v, rest) -> if BS.null rest then Just $ fromInteger v else Nothing
   Nothing -> Nothing
 
-toChunks :: Response -> [C.ByteString]
+toChunks :: Response -> [BS.ByteString]
 toChunks result = case result of
   Ok        -> ["OK", ln]
   Value key flag len value version ->
-    let header = C.intercalate " " ["VALUE", key, showf flag, showlen value] in
+    let header = BS.intercalate " " ["VALUE", key, (BS.pack . show) flag, showlen value] in
       case version of
       Nothing -> [header, ln, value, ln]
       Just version' -> [header, " ", showv version', ln, value, ln]
@@ -120,21 +165,18 @@ toChunks result = case result of
   Error     -> ["ERROR", ln]
   ServerError msg -> [concatMsg "SERVER_ERROR" msg, ln]
   ClientError msg -> [concatMsg "CLIENT_ERROR" msg, ln]
-  Version version -> [C.intercalate " " ["VERSION", C.pack version], ln]
-  Code code -> [C.pack $ show code, ln]
-  Stat name value -> ["STAT", " ", C.pack name, " ", C.pack value, ln]
+  Version version -> [BS.intercalate " " ["VERSION", version], ln]
+  Code code -> [BS.pack $ show code, ln]
+  Stat name value -> ["STAT", " ", name, " ", value, ln]
 
-ln :: C.ByteString
-ln = C.pack "\r\n"
+ln :: BS.ByteString
+ln = BS.pack "\r\n"
 
-showlen :: C.ByteString -> C.ByteString
-showlen value = C.pack (show $ C.length value)
+showlen :: BS.ByteString -> BS.ByteString
+showlen value = BS.pack (show $ BS.length value)
 
-showf :: Word16 -> C.ByteString
-showf = C.pack . show
+showv :: Word64 -> BS.ByteString
+showv = BS.pack . show
 
-showv :: Word64 -> C.ByteString
-showv = C.pack . show
-
-concatMsg :: C.ByteString -> String -> C.ByteString
-concatMsg code msg = if null msg then code else C.intercalate " " [code, C.pack msg]
+concatMsg :: BS.ByteString -> String -> BS.ByteString
+concatMsg code msg = if null msg then code else BS.intercalate " " [code, BS.pack msg]
