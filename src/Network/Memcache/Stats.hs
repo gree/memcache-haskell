@@ -5,18 +5,28 @@ module Network.Memcache.Stats (
   , getUptime
   , getTime
   , getVersion
+  , getPointerSize
+  , getRusageUser
+  , getRusageSystem
   , getCurrItems
+  , getTotalItems
   , getBytes
+  , getCurrConnections
+  , getTotalConnections
+  , getConnectionStructures
   , getCmdGet
   , getCmdSet
   , getGetHits
   , getGetMisses
+  , getEvictions
   , getBytesRead
   , getBytesWritten
   , getLimitMaxbytes
+  , getThreads
   ) where
 
 import Data.Int
+import Data.Word
 import Data.List.Split
 
 import Network.Memcache.Client
@@ -24,88 +34,153 @@ import Network.Memcache.Client
 getValue :: String -> StatsList -> Maybe String
 getValue key statsList = lookup key statsList
 
---  pid
-getPid :: StatsList -> Maybe Int
-getPid = getValueAsInt "pid"
+{-|
+  pid
+-}
+getPid :: StatsList -> Maybe Word32
+getPid = getValueAs "pid"
 
---  uptime
-getUptime :: StatsList -> Maybe Int64
-getUptime = getValueAsInt64 "uptime"
+{-|
+  uptime
+-}
+getUptime :: StatsList -> Maybe Word32
+getUptime = getValueAs "uptime"
 
---  time
-getTime :: StatsList -> Maybe Int64
-getTime = getValueAsInt64 "time"
+{-|
+  time (32u)
+  unit time
+-}
+getTime :: StatsList -> Maybe Word32
+getTime = getValueAs "time"
 
---  version
-getVersion :: StatsList -> Maybe [Int]
-getVersion statsList = do
-  version <- getValue "version" statsList
-  case splitOn "." version of
-    (major:minor:rev:_) -> return [read major, read minor, read rev]
-    _ -> Nothing
+{-|
+  version (string)
+-}
+getVersion :: StatsList -> Maybe String
+getVersion = getValue "version"
 
---  pointer_size
+{-|
+  pointer_size (32)
+-}
+getPointerSize :: StatsList -> Maybe Int32
+getPointerSize = getValueAs "pointer_size"
 
---  rusage_user
+{-|
+  rusage_user (32u.32u)
+-}
+getRusageUser :: StatsList -> Maybe (Word32, Word32)
+getRusageUser sl = do
+  ru <- getValue "rusage_user" sl
+  case splitOn "." ru of
+    (second:microsec:[]) -> return (read second, read microsec)
+    _ -> fail "invalid rusage_user"
 
---  rusage_system
+{-|
+  rusage_system (32u.32u)
+-}
+getRusageSystem :: StatsList -> Maybe (Word32, Word32)
+getRusageSystem sl = do
+  ru <- getValue "rusage_system" sl
+  case splitOn "." ru of
+    (second:microsec:[]) -> return (read second, read microsec)
+    _ -> fail "invalid rusage_system"
 
---  curr_items
-getCurrItems :: StatsList -> Maybe Int64
-getCurrItems = getValueAsInt64 "curr_items"
+{-|
+  curr_items (32u)
+-}
+getCurrItems :: StatsList -> Maybe Word64
+getCurrItems = getValueAs "curr_items"
 
---  bytes
-getBytes :: StatsList -> Maybe Int64
-getBytes = getValueAsInt64 "bytes"
+{-|
+  total_items (32u)
+-}
+getTotalItems :: StatsList -> Maybe Word64
+getTotalItems = getValueAs "total_items"
 
---  curr_connections
+{-|
+  bytes (64u)
+-}
+getBytes :: StatsList -> Maybe Word64
+getBytes = getValueAs "bytes"
 
---  total_connections
+{-|
+  curr_connections
+-}
+getCurrConnections :: StatsList -> Maybe Word32
+getCurrConnections = getValueAs "curr_connections"
 
---  connection_structures
+{-|
+  total_connections
+-}
+getTotalConnections :: StatsList -> Maybe Word32
+getTotalConnections = getValueAs "total_connections"
 
---  cmd_get
-getCmdGet :: StatsList -> Maybe Int64
-getCmdGet = getValueAsInt64 "cmd_get"
+{-|
+  connection_structures
+-}
+getConnectionStructures :: StatsList -> Maybe Word32
+getConnectionStructures = getValueAs "connection_structures"
 
---  cmd_set
-getCmdSet :: StatsList -> Maybe Int64
-getCmdSet = getValueAsInt64 "cmd_set"
+-- reserved_fds
 
---  get_hits
-getGetHits :: StatsList -> Maybe Int64
-getGetHits = getValueAsInt64 "get_hits"
+{-|
+  cmd_get (64u)
+-}
+getCmdGet :: StatsList -> Maybe Word64
+getCmdGet = getValueAs "cmd_get"
 
---  get_misses
-getGetMisses :: StatsList -> Maybe Int64
-getGetMisses = getValueAsInt64 "get_misses"
+{-|
+  cmd_set (64u)
+-}
+getCmdSet :: StatsList -> Maybe Word64
+getCmdSet = getValueAs "cmd_set"
 
---  evictions
+{-|
+  get_hits (64u)
+-}
+getGetHits :: StatsList -> Maybe Word64
+getGetHits = getValueAs "get_hits"
 
---  bytes_read
-getBytesRead :: StatsList -> Maybe Int64
-getBytesRead = getValueAsInt64 "bytes_read"
+{-|
+  get_misses (64u)
+-}
+getGetMisses :: StatsList -> Maybe Word64
+getGetMisses = getValueAs "get_misses"
 
---  bytes_written
+{-|
+  evictions (64u)
+-}
+getEvictions :: StatsList -> Maybe Word64
+getEvictions = getValueAs "evictions"
+
+{-|
+  bytes_read (64u)
+-}
+getBytesRead :: StatsList -> Maybe Word64
+getBytesRead = getValueAs "bytes_read"
+
+{-|
+  bytes_written (64u)
+-}
 getBytesWritten :: StatsList -> Maybe Int64
-getBytesWritten = getValueAsInt64 "bytes_written"
+getBytesWritten = getValueAs "bytes_written"
 
---  limit_maxbytes
+{-|
+  limit_maxbytes (32u)
+-}
 getLimitMaxbytes :: StatsList -> Maybe Int64
-getLimitMaxbytes = getValueAsInt64 "limit_maxbytes"
+getLimitMaxbytes = getValueAs "limit_maxbytes"
 
---  threads
+{-|
+  threads (32u)
+-}
+getThreads :: StatsList -> Maybe Word32
+getThreads = getValueAs "threads"
 
---  pool_threads
 
 ----------------------------------------------------------------
 
-getValueAsInt64 :: String -> StatsList -> Maybe Int64
-getValueAsInt64 key statsList = do
-  value <- getValue key statsList
-  return (read value)
-
-getValueAsInt :: String -> StatsList -> Maybe Int
-getValueAsInt key statsList = do
+getValueAs :: (Read a) => String -> StatsList -> Maybe a
+getValueAs key statsList = do
   value <- getValue key statsList
   return (read value)

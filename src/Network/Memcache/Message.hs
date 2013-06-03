@@ -52,7 +52,7 @@ instance Message Network.Memcache.Op.Op where
     | isStorageOp op = case bytesOf op of
         Just bytes -> do
           content <- readBytes handle bytes
-          term <- C.hGetLine handle
+          _term <- C.hGetLine handle
           return $ Just $ updateOpValue op content
         Nothing -> return $ Just op
     | otherwise = do
@@ -71,7 +71,7 @@ instance Message Network.Memcache.Response.Response where
       Nothing -> return $ Just $ ServerError $ C.unpack l
       Just (Value key flags len _ version) -> do
         value <- readBytes handle len
-        term <- C.hGetLine handle
+        _term <- C.hGetLine handle
         return $ Just $ Value key flags len value version
       Just resp -> return $ Just resp
 
