@@ -51,42 +51,42 @@ main = $(defaultMainGenerator)
 
 ----------------------------------------------------------------
 
-prop_toChunks_SetOp :: Key -> Word16 -> Word64 -> [Option] -> ValueT -> Bool
+prop_toChunks_SetOp :: Key -> Word32 -> Word64 -> [Option] -> ValueT -> Bool
 prop_toChunks_SetOp key flags exptime options value = r == e
  where
    key' = getKey key
    r = chunk2string (toChunks $ SetOp key' flags exptime (fromIntegral $ BS.length value) value options)
    e = "set " ++ BS.unpack key' ++ " " ++ show flags ++ " " ++ show exptime ++ " " ++ (show $ BS.length value) ++ showOptions options ++ ln ++ BS.unpack value ++ ln
 
-prop_toChunks_CasOp :: Key -> Word16 -> Word64 -> Word64 -> [Option] -> ValueT -> Bool
+prop_toChunks_CasOp :: Key -> Word32 -> Word64 -> Word64 -> [Option] -> ValueT -> Bool
 prop_toChunks_CasOp key flags exptime version options value = r == e
  where
    key' = getKey key
    r = chunk2string (toChunks $ CasOp key' flags exptime (fromIntegral $ BS.length value) version value options)
    e = "cas " ++ BS.unpack key' ++ " " ++ show flags ++ " " ++ show exptime ++ " " ++ (show $ BS.length value) ++ " " ++ show version ++ showOptions options ++ ln ++ BS.unpack value ++ ln
 
-prop_toChunks_AddOp :: Key -> Word16 -> Word64 -> [Option] -> ValueT -> Bool
+prop_toChunks_AddOp :: Key -> Word32 -> Word64 -> [Option] -> ValueT -> Bool
 prop_toChunks_AddOp key flags exptime options value = r == e
  where
    key' = getKey key
    r = chunk2string (toChunks $ AddOp key' flags exptime (fromIntegral $ BS.length value) value options)
    e = "add " ++ BS.unpack key' ++ " " ++ show flags ++ " " ++ show exptime ++ " " ++ (show $ BS.length value) ++ showOptions options ++ ln ++ BS.unpack value ++ ln
 
-prop_toChunks_ReplaceOp :: Key -> Word16 -> Word64 -> [Option] -> ValueT -> Bool
+prop_toChunks_ReplaceOp :: Key -> Word32 -> Word64 -> [Option] -> ValueT -> Bool
 prop_toChunks_ReplaceOp key flags exptime options value = r == e
  where
    key' = getKey key
    r = chunk2string (toChunks $ ReplaceOp key' flags exptime (fromIntegral $ BS.length value) value options)
    e = "replace " ++ BS.unpack key' ++ " " ++ show flags ++ " " ++ show exptime ++ " " ++ (show $ BS.length value) ++ showOptions options ++ ln ++ BS.unpack value ++ ln
 
-prop_toChunks_AppendOp :: Key -> Word16 -> Word64 -> [Option] -> ValueT -> Bool
+prop_toChunks_AppendOp :: Key -> Word32 -> Word64 -> [Option] -> ValueT -> Bool
 prop_toChunks_AppendOp key flags exptime options value = r == e
  where
    key' = getKey key
    r = chunk2string (toChunks $ AppendOp key' flags exptime (fromIntegral $ BS.length value) value options)
    e = "append " ++ BS.unpack key' ++ " " ++ show flags ++ " " ++ show exptime ++ " " ++ (show $ BS.length value) ++ showOptions options ++ ln ++ BS.unpack value ++ ln
 
-prop_toChunks_PrependOp :: Key -> Word16 -> Word64 -> [Option] -> ValueT -> Bool
+prop_toChunks_PrependOp :: Key -> Word32 -> Word64 -> [Option] -> ValueT -> Bool
 prop_toChunks_PrependOp key flags exptime options value = r == e
  where
    key' = getKey key
@@ -149,25 +149,25 @@ prop_toChunks_StatsOp args = chunk2string (toChunks $ StatsOp (map getPrintableS
 
 --------------------------------
 
-prop_parseOpHeader_SetOp :: Key -> Word16 -> Word64 -> [Option] -> ValueT -> Bool
+prop_parseOpHeader_SetOp :: Key -> Word32 -> Word64 -> [Option] -> ValueT -> Bool
 prop_parseOpHeader_SetOp key flags exptime options value = parseOpHeader_SetOp "set" SetOp key flags exptime options value
 
-prop_parseOpHeader_CasOp :: Key -> Word16 -> Word64 -> Word64 -> [Option] -> ValueT -> Bool
+prop_parseOpHeader_CasOp :: Key -> Word32 -> Word64 -> Word64 -> [Option] -> ValueT -> Bool
 prop_parseOpHeader_CasOp key flags exptime version options value = op == Just (CasOp key' flags exptime (fromIntegral $ BS.length value) version "" options)
  where
    key' = getKey key
    op = parseOpHeader (BS.pack ("cas " ++ BS.unpack key' ++ " " ++ show flags ++ " " ++ show exptime ++ " " ++ show (BS.length value) ++ " " ++ show version ++ showOptions options))
 
-prop_parseOpHeader_AddOp :: Key -> Word16 -> Word64 -> [Option] -> ValueT -> Bool
+prop_parseOpHeader_AddOp :: Key -> Word32 -> Word64 -> [Option] -> ValueT -> Bool
 prop_parseOpHeader_AddOp key flags exptime options value = parseOpHeader_SetOp "add" AddOp key flags exptime options value
 
-prop_parseOpHeader_ReplaceOp :: Key -> Word16 -> Word64 -> [Option] -> ValueT -> Bool
+prop_parseOpHeader_ReplaceOp :: Key -> Word32 -> Word64 -> [Option] -> ValueT -> Bool
 prop_parseOpHeader_ReplaceOp key flags exptime options value = parseOpHeader_SetOp "replace" ReplaceOp key flags exptime options value
 
-prop_parseOpHeader_AppendOp :: Key -> Word16 -> Word64 -> [Option] -> ValueT -> Bool
+prop_parseOpHeader_AppendOp :: Key -> Word32 -> Word64 -> [Option] -> ValueT -> Bool
 prop_parseOpHeader_AppendOp key flags exptime options value = parseOpHeader_SetOp "append" AppendOp key flags exptime options value
 
-prop_parseOpHeader_PrependOp :: Key -> Word16 -> Word64 -> [Option] -> ValueT -> Bool
+prop_parseOpHeader_PrependOp :: Key -> Word32 -> Word64 -> [Option] -> ValueT -> Bool
 prop_parseOpHeader_PrependOp key flags exptime options value = parseOpHeader_SetOp "prepend" PrependOp key flags exptime options value
 
 prop_parseOpHeader_GetOp :: [Key] -> Bool
@@ -229,7 +229,7 @@ ln = "\r\n"
 
 showOptions options = (concat $ map (\o -> " " ++ show o) options)
 
-parseOpHeader_SetOp :: String -> (BS.ByteString -> Word16 -> Word64 -> BytesT -> ValueT -> [Option] -> Op) -> Key -> Word16 -> Word64 -> [Option] -> ValueT -> Bool
+parseOpHeader_SetOp :: String -> (BS.ByteString -> Word32 -> Word64 -> BytesT -> ValueT -> [Option] -> Op) -> Key -> Word32 -> Word64 -> [Option] -> ValueT -> Bool
 parseOpHeader_SetOp cmd opType key flags exptime options value = op == Just (opType key' flags exptime (fromIntegral $ BS.length value) "" options)
  where
    key' = getKey key

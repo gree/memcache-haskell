@@ -21,13 +21,13 @@ module Network.Memcache.Response (
       , Code
       , Stat)
   , parseResponseHeader
+  , responseParser
   , toChunks) where
 
 import Prelude hiding (takeWhile, take)
 import qualified Data.ByteString.Char8 as BS
 import Data.Word
 import Data.Attoparsec.ByteString.Char8
-import qualified Data.Attoparsec.ByteString as AB
 import qualified Data.Attoparsec.ByteString.Lazy as AL
 import Control.Applicative
 import Data.Char
@@ -36,11 +36,11 @@ import Data.Char
 data Response =
     Ok
   | Value {
-      resKey     :: BS.ByteString
-    , resFlag    :: Word32
-    , resLen     :: Word64
-    , resValue   :: BS.ByteString
-    , resVersion :: Maybe Word64 -- Value key flag value
+      _resKey     :: BS.ByteString
+    , _resFlag    :: Word32
+    , _resLen     :: Word64
+    , _resValue   :: BS.ByteString
+    , _resVersion :: Maybe Word64 -- Value key flag value
     }
   | End
   | Stored
@@ -68,10 +68,8 @@ responseParser = do
         key     <- skipWhile (== ' ') *> AL.takeWhile (\c -> c /= 0x20 && not (isEndOfLine c)) 
         flags   <- skipWhile (== ' ') *> decimal
         len     <- skipWhile (== ' ') *> decimal
-        version <- skipWhile (== ' ') *> try (fmap Just decimal) <|> return (Nothing) <* skipWhile (== ' ')
-        endline
-        value   <- take len
-        endline
+        version <- skipWhile (== ' ') *> (try (fmap Just decimal) <|> return (Nothing) <* skipWhile (== ' ')) <* endline
+        value   <- take len <* endline
         return (Value key flags (fromIntegral len) value version)
     "END"          -> pure End
     "STORED"       -> pure Stored
@@ -150,10 +148,10 @@ toChunks :: Response -> [BS.ByteString]
 toChunks result = case result of
   Ok        -> ["OK", ln]
   Value key flag len value version ->
-    let header = BS.intercalate " " ["VALUE", key, (BS.pack . show) flag, showlen value] in
+    let header = BS.intercalate " " ["VALUE", key, show' flag, show' len] in
       case version of
       Nothing -> [header, ln, value, ln]
-      Just version' -> [header, " ", showv version', ln, value, ln]
+      Just version' -> [header, " ", show' version', ln, value, ln]
   End       -> ["END", ln]
   Stored    -> ["STORED", ln]
   NotStored -> ["NOT_STORED", ln]
@@ -168,15 +166,12 @@ toChunks result = case result of
   Version version -> [BS.intercalate " " ["VERSION", version], ln]
   Code code -> [BS.pack $ show code, ln]
   Stat name value -> ["STAT", " ", name, " ", value, ln]
+  where
+    show' :: (Show a) => a -> BS.ByteString
+    show' = BS.pack . show
 
 ln :: BS.ByteString
 ln = BS.pack "\r\n"
-
-showlen :: BS.ByteString -> BS.ByteString
-showlen value = BS.pack (show $ BS.length value)
-
-showv :: Word64 -> BS.ByteString
-showv = BS.pack . show
 
 concatMsg :: BS.ByteString -> String -> BS.ByteString
 concatMsg code msg = if null msg then code else BS.intercalate " " [code, BS.pack msg]

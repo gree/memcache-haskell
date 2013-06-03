@@ -44,12 +44,12 @@ module Network.Memcache.Op (
   , updateOpValue
   ) where
 
-import qualified Data.ByteString.Char8 as C
+import qualified Data.ByteString.Char8 as BS
 import Data.Word
 import Data.List
 import Data.Maybe
 
-type ValueT = C.ByteString
+type ValueT = BS.ByteString
 type BytesT = Word64
 data Option = Noreply deriving (Eq)
 
@@ -65,58 +65,58 @@ instance Read Option where
 data Op = 
   -- storage commands
     SetOp {
-      key     :: C.ByteString
-    , flags   :: Word16
+      key     :: BS.ByteString
+    , flags   :: Word32
     , exptime :: Word64
     , bytes   :: BytesT
     , value   :: ValueT
     , options :: [Option] }
   | CasOp {
-      key     :: C.ByteString
-    , flags   :: Word16
+      key     :: BS.ByteString
+    , flags   :: Word32
     , exptime :: Word64
     , bytes   :: BytesT
     , version :: Word64
     , value   :: ValueT
     , options :: [Option] }
   | AddOp {
-      key     :: C.ByteString
-    , flags   :: Word16
+      key     :: BS.ByteString
+    , flags   :: Word32
     , exptime :: Word64
     , bytes   :: BytesT
     , value   :: ValueT
     , options :: [Option] }
   | ReplaceOp {
-      key     :: C.ByteString
-    , flags   :: Word16
+      key     :: BS.ByteString
+    , flags   :: Word32
     , exptime :: Word64
     , bytes   :: BytesT
     , value   :: ValueT
     , options :: [Option] }
   | AppendOp {
-      key     :: C.ByteString
-    , flags   :: Word16
+      key     :: BS.ByteString
+    , flags   :: Word32
     , exptime :: Word64
     , bytes   :: BytesT
     , value   :: ValueT
     , options :: [Option] }
   | PrependOp {
-      key     :: C.ByteString
-    , flags   :: Word16
+      key     :: BS.ByteString
+    , flags   :: Word32
     , exptime :: Word64
     , bytes   :: BytesT
     , value   :: ValueT
     , options :: [Option] }
   -- retrieval commands
-  | GetOp { keys :: [C.ByteString] }
-  | GetsOp { keys :: [C.ByteString] }
+  | GetOp { keys :: [BS.ByteString] }
+  | GetsOp { keys :: [BS.ByteString] }
   -- deletion commands
-  | DeleteOp { key :: C.ByteString, options :: [Option] }
+  | DeleteOp { key :: BS.ByteString, options :: [Option] }
   -- increment and decrement commands
-  | IncrOp { key :: C.ByteString, value' :: Word64, options :: [Option] }
-  | DecrOp { key :: C.ByteString, value' :: Word64, options :: [Option] }
+  | IncrOp { key :: BS.ByteString, value' :: Word64, options :: [Option] }
+  | DecrOp { key :: BS.ByteString, value' :: Word64, options :: [Option] }
   -- touch commands
-  | TouchOp { key :: C.ByteString, exptime :: Word64, options :: [Option] }
+  | TouchOp { key :: BS.ByteString, exptime :: Word64, options :: [Option] }
   -- stats commands
   -- other commands
   | PingOp
@@ -126,14 +126,14 @@ data Op =
   | StatsOp { args :: [String] }
  deriving (Show, Read, Eq)
 
-toOptions :: [C.ByteString] -> Maybe [Option]
+toOptions :: [BS.ByteString] -> Maybe [Option]
 toOptions opts = if elem Nothing converted
                  then Nothing
                  else Just $ concat $ map maybeToList converted
   where
     converted = map toOption opts
 
-toOption :: C.ByteString -> Maybe Option
+toOption :: BS.ByteString -> Maybe Option
 toOption option = case option of
   "noreply" -> Just Noreply
   _ -> Nothing
@@ -148,7 +148,7 @@ bytesOf op
   | isStorageOp op = Just $ bytes op
   | otherwise = Nothing
 
-keyOf :: Op -> Maybe C.ByteString
+keyOf :: Op -> Maybe BS.ByteString
 keyOf op = case op of
   PingOp -> Nothing
   FlushAllOp -> Nothing
@@ -205,28 +205,28 @@ isNoreplyOp op = case op of
   TouchOp { options = os }   -> elem Noreply os
   _ -> False
 
-toChunks :: Op -> [C.ByteString]
+toChunks :: Op -> [BS.ByteString]
 toChunks op = case op of
   PingOp -> ["ping", ln]
   -- storage commands
-  SetOp key flags exptime bytes value options -> setop "set" key flags exptime value options
+  SetOp key flags exptime bytes value options -> setop "set" key flags exptime bytes value options
   CasOp key flags exptime bytes version value options ->
-    [C.concat ["cas ", key, " ", show' flags, " ", show' exptime, " ", showlen value,
+    [BS.concat ["cas ", key, " ", show' flags, " ", show' exptime, " ", show' bytes,
                " ", show' version, showopt options, ln], value, ln]
-  AddOp key flags exptime bytes value options -> setop "add" key flags exptime value options
-  ReplaceOp key flags exptime bytes value options -> setop "replace" key flags exptime value options
-  AppendOp key flags exptime bytes value options -> setop "append" key flags exptime value options
-  PrependOp key flags exptime bytes value options -> setop "prepend" key flags exptime value options
+  AddOp key flags exptime bytes value options -> setop "add" key flags exptime bytes value options
+  ReplaceOp key flags exptime bytes value options -> setop "replace" key flags exptime bytes value options
+  AppendOp key flags exptime bytes value options -> setop "append" key flags exptime bytes value options
+  PrependOp key flags exptime bytes value options -> setop "prepend" key flags exptime bytes value options
   -- retrieval commands
-  GetOp keys -> [C.concat ["get ", C.intercalate " " keys, ln]]
-  GetsOp keys -> [C.concat ["gets ", C.intercalate " " keys, ln]]
+  GetOp keys -> [BS.concat ["get ", BS.intercalate " " keys, ln]]
+  GetsOp keys -> [BS.concat ["gets ", BS.intercalate " " keys, ln]]
   -- deletion commands
-  DeleteOp key options -> [C.concat ["delete ", key, showopt options, ln]]
+  DeleteOp key options -> [BS.concat ["delete ", key, showopt options, ln]]
   -- increment and decrement commands
   IncrOp key value' options -> incrdecrop "incr" key value' options
   DecrOp key value' options -> incrdecrop "decr" key value' options
   -- touch commands
-  TouchOp key exptime options -> [C.concat ["touch ", key, " ", show' exptime, showopt options, ln]]
+  TouchOp key exptime options -> [BS.concat ["touch ", key, " ", show' exptime, showopt options, ln]]
   -- stats commands
   -- other commands
   FlushAllOp -> ["flush_all", ln]
@@ -234,26 +234,25 @@ toChunks op = case op of
   QuitOp -> ["quit", ln]
   StatsOp args -> case args of
     [] -> ["stats", ln]
-    _ -> ["stats ", C.pack $ intercalate " " args, ln]
+    _ -> ["stats ", BS.pack $ intercalate " " args, ln]
   where
-    ln = C.pack "\r\n"
-    show' a = C.pack $ show a
-    showlen a = show' $ C.length a
+    ln = BS.pack "\r\n"
+    show' a = BS.pack $ show a
     showopt [] = ""
-    showopt os = C.concat [" ", C.intercalate " " (map (C.pack . show) os)]
-    setop cmd key flags exptime value options =
-      [C.concat [cmd, " ", key, " ", show' flags, " ", show' exptime, " ", showlen value, showopt options, ln], value, ln]
+    showopt os = BS.concat [" ", BS.intercalate " " (map (BS.pack . show) os)]
+    setop cmd key flags exptime len value options =
+      [BS.concat [cmd, " ", key, " ", show' flags, " ", show' exptime, " ", show' len, showopt options, ln], value, ln]
     incrdecrop cmd key value' options =
-      [C.concat [cmd, " ", key, " ", show' value', showopt options, ln]]
+      [BS.concat [cmd, " ", key, " ", show' value', showopt options, ln]]
 
 -- parse op header
-parseOpHeader :: C.ByteString -> Maybe Op
+parseOpHeader :: BS.ByteString -> Maybe Op
 parseOpHeader headerLine = 
-  case filter (\x -> not (C.null x)) (C.split ' ' headerLine) of
+  case filter (\x -> not (BS.null x)) (BS.split ' ' headerLine) of
     [] -> Nothing
     (cmd:args) -> parseOpHeader' cmd args
 
-parseOpHeader' :: C.ByteString -> [C.ByteString] -> Maybe Op
+parseOpHeader' :: BS.ByteString -> [BS.ByteString] -> Maybe Op
 parseOpHeader' cmd args
   | cmd == "get"       = op_get args
   | cmd == "gets"      = op_gets args
@@ -290,7 +289,7 @@ parseOpHeader' cmd args
       Nothing -> Nothing
     op_set' _ _ = Nothing
 
-    parseStorageArgs :: [C.ByteString] -> Maybe (Word16, Word64, BytesT, [Option])
+    parseStorageArgs :: [BS.ByteString] -> Maybe (Word32, Word64, BytesT, [Option])
     parseStorageArgs (flag:expire:size:options) = do
       flag' <- readWord flag
       size' <- readWord64 size
@@ -325,7 +324,7 @@ parseOpHeader' cmd args
 
     -- delete <key>
     op_delete (key:options) = case toOptions options of
-      Just os -> if C.null key then Nothing else Just $ DeleteOp key os
+      Just os -> if BS.null key then Nothing else Just $ DeleteOp key os
       Nothing -> Nothing
     op_delete _ = Nothing
 
@@ -334,7 +333,7 @@ parseOpHeader' cmd args
       case readWord64 expire of
         Just expire' ->
           case toOptions options of
-            Just options' -> if C.null key then Nothing else Just $ TouchOp key expire' options'
+            Just options' -> if BS.null key then Nothing else Just $ TouchOp key expire' options'
             Nothing -> Nothing
         Nothing -> Nothing
     op_touch _ = Nothing
@@ -356,19 +355,19 @@ parseOpHeader' cmd args
     op_ping _ = Nothing
 
     -- stats
-    op_stats args = Just $ StatsOp (map C.unpack args)
+    op_stats args = Just $ StatsOp (map BS.unpack args)
 
-readInt :: C.ByteString -> Maybe Int
-readInt x = case C.readInt x of
-  Just (v, rest) -> if C.null rest then Just v else Nothing
+readInt :: BS.ByteString -> Maybe Int
+readInt x = case BS.readInt x of
+  Just (v, rest) -> if BS.null rest then Just v else Nothing
   Nothing -> Nothing
 
-readWord :: C.ByteString -> Maybe Word
-readWord x = case C.readInteger x of
-  Just (v, rest) -> if C.null rest then Just (fromIntegral v) else Nothing
+readWord :: BS.ByteString -> Maybe Word
+readWord x = case BS.readInteger x of
+  Just (v, rest) -> if BS.null rest then Just (fromIntegral v) else Nothing
   Nothing -> Nothing
 
-readWord64 :: C.ByteString -> Maybe Word64
-readWord64 x = case C.readInteger x of
-  Just (v, rest) -> if C.null rest then Just (fromIntegral v) else Nothing
+readWord64 :: BS.ByteString -> Maybe Word64
+readWord64 x = case BS.readInteger x of
+  Just (v, rest) -> if BS.null rest then Just (fromIntegral v) else Nothing
   Nothing -> Nothing
