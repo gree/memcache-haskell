@@ -38,19 +38,20 @@ data Client = MemcachedClient {
 type StatsList = [(String, String)]
 type Nodekey = String
 
-openClient :: Nodekey -> IO (Maybe Client)
+openClient :: (MonadIO m) => Nodekey -> m (Maybe Client)
 openClient nodekey = case hostnameAndPort nodekey of
   Just (hostname, port) -> do
     let portNumber = PortNumber (fromIntegral port)
-    socket <- connectTo hostname portNumber
+    socket <- liftIO $ connectTo hostname portNumber
     return $ Just $ MemcachedClient nodekey socket
   Nothing -> return Nothing
 
-closeClient :: Client -> IO ()
+closeClient :: (MonadIO m) => Client -> m ()
 closeClient client = do
   let hSocket = clientSocket client
-  closeClient' `catch` (\(SomeException _e) -> return ())
-  hClose hSocket
+  liftIO $ do
+    closeClient' `catch` (\(SomeException _e) -> return ())
+    hClose hSocket
   where
     closeClient' = do
       let hSocket = clientSocket client
@@ -86,34 +87,36 @@ forEachClient clients act = do
 
 -- Operation
 
-ping :: Client -> IO (Maybe Response)
+ping :: (MonadIO m) => Client -> m (Maybe Response)
 ping client = do
   let socket = clientSocket client
       op = PingOp
-  send socket op
-  resp <- recv socket :: IO (Maybe Response)
+  liftIO $ send socket op
+  resp <- liftIO $ do
+    recv socket :: IO (Maybe Response)
   return (resp)
 
-flushAll :: Client -> IO (Maybe Response)
+flushAll :: (MonadIO m) => Client -> m (Maybe Response)
 flushAll client = do
   let socket = clientSocket client
       op = FlushAllOp
-  send socket op
-  resp <- recv socket :: IO (Maybe Response)
+  liftIO $ send socket op
+  resp <- liftIO $ do
+    recv socket :: IO (Maybe Response)
   return (resp)
 
-stats :: Client -> IO (StatsList)
+stats :: (MonadIO m) => Client -> m (StatsList)
 stats client = statsWithArgs client []
 
-statsWithArgs :: Client -> [String] -> IO ([(String, String)])
+statsWithArgs :: (MonadIO m) => Client -> [String] -> m ([(String, String)])
 statsWithArgs client args = do
   let socket = clientSocket client
-  send socket $ StatsOp args
+  liftIO $ send socket $ StatsOp args
   resp <- getResponse socket []    
   return (Prelude.reverse resp)
   where
     getResponse sock result = do
-      resp <- recv sock
+      resp <- liftIO $ recv sock
       case resp of
         Just (Stat statName statValue) -> getResponse sock ((BS.unpack statName, BS.unpack statValue):result)
         Just End -> return (result)
