@@ -2,6 +2,9 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 
+{-|
+  This module represents memcached response messages.
+-}
 module Network.Memcache.Response (
     Response (
         Ok
@@ -149,32 +152,26 @@ parseResponse' onlyHeader input = let r = parse (responseParser' onlyHeader) inp
 -}
 toChunks :: Response -> [BS.ByteString]
 toChunks result = case result of
-  Ok        -> ["OK", ln]
+  Ok        -> ["OK\r\n"]
   Value key flag len value version ->
     let header = BS.intercalate " " ["VALUE", key, show' flag, show' len] in
       case version of
-      Nothing -> [header, ln, value, ln]
-      Just version' -> [header, " ", show' version', ln, value, ln]
-  End       -> ["END", ln]
-  Stored    -> ["STORED", ln]
-  NotStored -> ["NOT_STORED", ln]
-  Exists    -> ["EXISTS", ln]
-  NotFound  -> ["NOT_FOUND", ln]
-  Deleted   -> ["DELETED", ln]
-  Found     -> ["FOUND", ln]
-  Touched   -> ["TOUCHED", ln]
-  Error     -> ["ERROR", ln]
-  ServerError msg -> [concatMsg "SERVER_ERROR" msg, ln]
-  ClientError msg -> [concatMsg "CLIENT_ERROR" msg, ln]
-  Version version -> [BS.intercalate " " ["VERSION", version], ln]
-  Code code -> [BS.pack $ show code, ln]
-  Stat name value -> ["STAT", " ", name, " ", value, ln]
+      Nothing -> [header, "\r\n", value, "\r\n"]
+      Just version' -> [header, " ", show' version', "\r\n", value, "\r\n"]
+  End       -> ["END\r\n"]
+  Stored    -> ["STORED\r\n"]
+  NotStored -> ["NOT_STORED\r\n"]
+  Exists    -> ["EXISTS\r\n"]
+  NotFound  -> ["NOT_FOUND\r\n"]
+  Deleted   -> ["DELETED\r\n"]
+  Found     -> ["FOUND\r\n"]
+  Touched   -> ["TOUCHED\r\n"]
+  Error     -> ["ERROR\r\n"]
+  ServerError msg -> [BS.concat ["SERVER_ERROR", BS.pack $ if null msg then "" else " " ++ msg, "\r\n"]]
+  ClientError msg -> [BS.concat ["CLIENT_ERROR", BS.pack $ if null msg then "" else " " ++ msg, "\r\n"]]
+  Version version -> [BS.concat $ [BS.intercalate " " ["VERSION", version], "\r\n"]]
+  Code code -> [BS.pack $ show code ++ "\r\n"]
+  Stat name value -> [BS.concat ["STAT", " ", name, " ", value, "\r\n"]]
   where
     show' :: (Show a) => a -> BS.ByteString
     show' = BS.pack . show
-
-ln :: BS.ByteString
-ln = BS.pack "\r\n"
-
-concatMsg :: BS.ByteString -> String -> BS.ByteString
-concatMsg code msg = if null msg then code else BS.intercalate " " [code, BS.pack msg]
