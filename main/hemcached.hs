@@ -39,6 +39,16 @@ process ht = do
         liftIO $ H.insert ht key value
         yield (Stored)
         process ht
+      AddOp key flags exptime bytes value options -> do
+        resp <- liftIO $ do
+          mValue <- H.lookup ht key
+          case mValue of
+            Nothing -> do
+              liftIO $ H.insert ht key value
+              return (Stored)
+            Just value -> return (NotStored)
+        yield resp
+        process ht
       GetOp keys -> do
         processGet keys
         yield (End)

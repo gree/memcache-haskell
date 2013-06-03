@@ -50,19 +50,7 @@ getResponseText :: (MonadIO m, MonadThrow m) => ConduitM C.ByteString Response m
 getResponseText = getResponseText' =$= removePR
 
 getResponseText' :: (MonadIO m, MonadThrow m) => ConduitM C.ByteString (PositionRange, Response) m ()
-getResponseText' = conduitParser response
-  where
-    response :: Parser Response
-    response = do
-      header <- skipSpace' *> AL.takeTill isEndOfLine <* endline
-      case parseResponseHeader header of
-        Just (Value key flag len _value version) -> do
-          value' <- AL.take (fromIntegral len) <* endline
-          return (Value key flag len value' version)
-        Just resp -> do
-          return (resp)
-        Nothing -> return (Error)
-  
+getResponseText' = conduitParser responseParser
 
 putResponseText :: MonadIO m => ConduitM Response C.ByteString m ()
 putResponseText = do
