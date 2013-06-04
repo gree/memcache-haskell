@@ -13,6 +13,7 @@ import Data.Conduit.Network.Internal
 import Data.Conduit.Memcache
 import Network.Socket
 
+import Network.Memcache.Response
 
 main :: IO ()
 main = do
@@ -31,7 +32,10 @@ proxyLoop serverData clientData = do
       (serverSource', mop) <- serverSource $$++ await
       case mop of
         Nothing -> return ()
-        Just op -> do
+        Just (Left msg) -> do
+          yield Error $$ (putResponseText =$ serverSink)
+          loop serverSource' serverSink clientSource clientSink
+        Just (Right op) -> do
           yield op $$ (putOpText =$ clientSink)
           (clientSource', mresp) <- clientSource $$++ await
           case mresp of

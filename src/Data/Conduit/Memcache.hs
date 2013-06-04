@@ -15,27 +15,27 @@ import Data.Conduit.Attoparsec
 import Network.Memcache.Op
 import Network.Memcache.Response
 
-getOpText :: (MonadIO m, MonadThrow m) => ConduitM C.ByteString Op m ()
+getOpText :: (MonadIO m, MonadThrow m) => ConduitM C.ByteString (Either String Op) m ()
 getOpText = getOpText' =$= removePR
 
-getOpText' :: (MonadIO m, MonadThrow m) => ConduitM C.ByteString (PositionRange, Op) m ()
+getOpText' :: (MonadIO m, MonadThrow m) => ConduitM C.ByteString (PositionRange, Either String Op) m ()
 getOpText' = conduitParser command
   where
-    command :: Parser Op
+    command :: Parser (Either String Op)
     command = do
       header <- skipSpace' *> AL.takeTill isEndOfLine <* endline
       case parseOpHeader header of
-        Nothing -> return (QuitOp)
+        Nothing -> return (Left "invalid command")
         Just op -> do
           if isStorageOp op
             then do
             case bytesOf op of
               Just bytes -> do
                 content <- AL.take (fromIntegral bytes) <* endline
-                return (updateOpValue op content)
-              Nothing -> return (op)
+                return (Right $ updateOpValue op content)
+              Nothing -> return (Right op)
             else do
-            return (op)
+            return (Right op)
 
 removePR :: (MonadIO m, MonadThrow m) => ConduitM (PositionRange, t) t m ()
 removePR = do

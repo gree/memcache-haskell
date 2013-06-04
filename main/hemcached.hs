@@ -30,12 +30,15 @@ main = do
       =$ putResponseText
       =$ (appSink appData)
 
-process :: MonadIO m => MVar (HashTable Key Value) -> ConduitM Op Response m ()
+process :: MonadIO m => MVar (HashTable Key Value) -> ConduitM (Either String Op) Response m ()
 process htVar = do
   mOpType <- await
   case mOpType of
     Nothing -> return ()
-    Just op -> case op of
+    Just (Left msg) -> do
+      yield Error
+      process htVar
+    Just (Right op) -> case op of
       SetOp key flags exptime bytes value options -> do
         ht <- liftIO $ takeMVar htVar
         liftIO $ H.insert ht key value
