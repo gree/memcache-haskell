@@ -10,14 +10,14 @@ Cabal-Version:  >=1.8
 
 Library
   Ghc-Options:     -O2 -Wall
-  Build-Depends:   base >=4 && <5
+  Build-Depends:   base         >=4 && <5
                  , bytestring
-                 , network >= 2.3.2
+                 , network      >= 2.3.2
                  , attoparsec
                  , transformers
                  , split
                  , cereal
-                 , hashable < 1.2
+                 , hashable     < 1.2
   Hs-source-dirs:  src
   Exposed-modules: Network.Memcache
                  , Network.Memcache.Response
@@ -26,6 +26,7 @@ Library
                  , Network.Memcache.Client
                  , Network.Memcache.Stats
                  , Network.Memcache.Util
+                 , Network.Memcache.Types
   Extensions:      DeriveDataTypeable
 
 Test-Suite test-memcache
