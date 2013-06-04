@@ -23,17 +23,20 @@ import Network.Memcache.Response
 data ProgramOptions = ProgramOptions {
     optHost :: String
   , optPort :: Int
+  , optListenPort :: Int
   } deriving (Show)
 
 defaultOptions = ProgramOptions {
-    optHost = "127.0.0.1"
-  , optPort = 12121
+    optHost       = "127.0.0.1"
+  , optPort       = 12121
+  , optListenPort = 12122
   }
 
 options :: [OptDescr (ProgramOptions -> ProgramOptions)]
 options =
-  [ Option ['d'] ["dest"] (ReqArg (\h opt -> opt { optHost = h })       "HOST") "destination host"
-  , Option ['p'] ["dport"] (ReqArg (\h opt -> opt { optPort = read h }) "PORT") "destination port"
+  [ Option ['d'] ["dest"] (ReqArg (\h opt -> opt { optHost = h })             "HOST") "destination host"
+  , Option ['p'] ["dport"] (ReqArg (\h opt -> opt { optPort = read h })       "PORT") "destination port"
+  , Option ['l'] ["lport"] (ReqArg (\h opt -> opt { optListenPort = read h }) "PORT") "listen port"
   ]
 
 memcachedProxyOpts :: [String] -> IO (ProgramOptions, [String])
@@ -48,10 +51,9 @@ main = do
   args0 <- getArgs
   (opts, args) <- memcachedProxyOpts args0
   setNumCapabilities 4
-  let sSettings0 = (serverSettings 13302 HostAny) :: ServerSettings IO
+  let sSettings0 = (serverSettings (optListenPort opts) HostAny) :: ServerSettings IO
       sSettings = sSettings0  { serverAfterBind = (\s -> setSocketOption s NoDelay 1) }
   runTCPServer sSettings $ \appData -> do
-    -- runTCPClient (clientSettings 13301 "127.0.0.1") (proxyLoop appData)
     runTCPClient (clientSettings (optPort opts) (BS.pack $ optHost opts)) (proxyLoop appData)
     
 proxyLoop :: AppData IO -> AppData IO -> IO ()
