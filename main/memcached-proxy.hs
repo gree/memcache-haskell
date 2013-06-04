@@ -14,17 +14,45 @@ import Data.Conduit.Memcache
 import Network.Socket
 import qualified Data.ByteString.Char8 as BS
 import Control.Concurrent hiding (yield)
+import System.Console.GetOpt
+import System.Environment (getArgs)
 
 import Network.Memcache.Op
 import Network.Memcache.Response
 
+data ProgramOptions = ProgramOptions {
+    optHost :: String
+  , optPort :: Int
+  } deriving (Show)
+
+defaultOptions = ProgramOptions {
+    optHost = "127.0.0.1"
+  , optPort = 12121
+  }
+
+options :: [OptDescr (ProgramOptions -> ProgramOptions)]
+options =
+  [ Option ['d'] ["dest"] (ReqArg (\h opt -> opt { optHost = h })       "HOST") "destination host"
+  , Option ['p'] ["dport"] (ReqArg (\h opt -> opt { optPort = read h }) "PORT") "destination port"
+  ]
+
+memcachedProxyOpts :: [String] -> IO (ProgramOptions, [String])
+memcachedProxyOpts argv =
+  case getOpt Permute options argv of
+    (o,n,[]  ) -> return (foldl (flip id) defaultOptions o, n)
+    (_,_,errs) -> ioError (userError (concat errs ++ usageInfo header options))
+  where header = "Usage: memcached-proxy [OPTION...]"
+
 main :: IO ()
 main = do
+  args0 <- getArgs
+  (opts, args) <- memcachedProxyOpts args0
   setNumCapabilities 4
   let sSettings0 = (serverSettings 13302 HostAny) :: ServerSettings IO
       sSettings = sSettings0  { serverAfterBind = (\s -> setSocketOption s NoDelay 1) }
   runTCPServer sSettings $ \appData -> do
-    runTCPClient (clientSettings 13301 "127.0.0.1") (proxyLoop appData)
+    -- runTCPClient (clientSettings 13301 "127.0.0.1") (proxyLoop appData)
+    runTCPClient (clientSettings (optPort opts) (BS.pack $ optHost opts)) (proxyLoop appData)
     
 proxyLoop :: AppData IO -> AppData IO -> IO ()
 proxyLoop serverData clientData = do
@@ -70,7 +98,9 @@ proxyLoop' serverSource serverSink clientSource clientSink = do
           End -> do
             yield End $$ (putResponseText =$ serverSink)
             return (clientSource')
-
+          _ -> do -- XXX
+            yield resp $$ (putResponseText =$ serverSink)
+            proxyGet clientSource'
 
 runTCPClient :: (MonadIO m, MonadBaseControl IO m) => ClientSettings m -> Application m -> m ()
 runTCPClient settings app = control $ \run -> bracket
