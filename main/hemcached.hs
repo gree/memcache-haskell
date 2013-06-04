@@ -11,7 +11,7 @@ import Data.Conduit.Memcache
 import qualified Data.HashTable.IO as H
 import Network.Memcache.Op
 import Network.Memcache.Response
-
+import Control.Monad
 
 type Key = BS.ByteString
 type Value = BS.ByteString
@@ -35,11 +35,11 @@ process ht = do
     Just op -> case op of
       SetOp key flags exptime bytes value options -> do
         liftIO $ H.insert ht key value
-        yield' (Noreply `elem` options) Stored
+        when (Noreply `notElem` options) $ yield Stored
         process ht
       CasOp key flags exptime bytes version value options -> do -- XXX
         liftIO $ H.insert ht key value
-        yield' (Noreply `elem` options) Stored
+        when (Noreply `notElem` options) $ yield Stored
         process ht
       AddOp key flags exptime bytes value options -> do
         resp <- liftIO $ do
@@ -49,7 +49,7 @@ process ht = do
               liftIO $ H.insert ht key value
               return (Stored)
             Just value -> return (NotStored)
-        yield' (Noreply `elem` options) resp
+        when (Noreply `notElem` options) $ yield resp
         process ht
       ReplaceOp key flags exptime bytes value options -> do
         resp <- liftIO $ do
@@ -59,7 +59,7 @@ process ht = do
             Just value -> do
               liftIO $ H.insert ht key value
               return (Stored)
-        yield' (Noreply `elem` options) resp
+        when (Noreply `notElem` options) $ yield resp
         process ht
       AppendOp key flags exptime bytes value options -> do
         append' True key flags exptime bytes value options
@@ -77,7 +77,7 @@ process ht = do
         process ht
       DeleteOp key options -> do
         liftIO $ H.delete ht key
-        yield' (Noreply `elem` options) Deleted
+        when (Noreply `notElem` options) $ yield Deleted
         process ht
       IncrOp key value options -> do
         incr' True key value options
@@ -91,7 +91,7 @@ process ht = do
           case mValue of
             Nothing -> return (NotFound)
             Just value -> return (Touched) -- XXX
-        yield' (Noreply `elem` options) resp
+        when (Noreply `notElem` options) $ yield resp
         process ht
       PingOp -> do
         yield Ok
@@ -105,7 +105,7 @@ process ht = do
         process ht
       QuitOp -> return ()
       StatsOp args -> do
-        yield' (isNoreplyOp op) Error
+        yield End
         process ht
   where
     incr' isIncr key value options = do
@@ -117,7 +117,7 @@ process ht = do
             let r = if isIncr then read (BS.unpack value') + value else read (BS.unpack value') - value
             liftIO $ H.insert ht key (BS.pack $ show r)
             return (Code r)
-      yield' (Noreply `elem` options) resp
+      when (Noreply `notElem` options) $ yield resp
 
     append' isAppend key flags exptime bytes value options = do
       resp <- liftIO $ do
@@ -127,10 +127,8 @@ process ht = do
           Just value' -> do
             liftIO $ H.insert ht key (BS.concat $ if isAppend then [value', value] else [value, value'])
             return (Stored)
-      yield' (Noreply `elem` options) resp
+      when (Noreply `notElem` options) $ yield resp
 
-    yield' isNoreply resp = if isNoreply then return () else yield resp
-    
     processGet _ [] = return ()
     processGet withVersion (key:rest) = do
         mValue <- liftIO $ H.lookup ht key
