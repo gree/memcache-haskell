@@ -111,7 +111,7 @@ responseParser' onlyHeader = try commandParser <|> codeParser
         "CLIENT_ERROR" -> ClientError <$> (skipWhile (== ' ') *> fmap BS.unpack (AL.takeTill isEndOfLine))
         "STAT"         -> Stat
                           <$> (skipWhile (== ' ') *> takeWhile (/= ' '))
-                          <*> AL.takeTill isEndOfLine
+                          <*> (skipWhile (== ' ') *> AL.takeTill isEndOfLine)
         "VERSION"      -> Version <$> (skipWhile (== ' ') *> AL.takeTill isEndOfLine)
         _              -> fail $ "unknown command " ++ BS.unpack cmd
       _ <- endline
