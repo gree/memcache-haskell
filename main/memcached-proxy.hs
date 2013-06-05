@@ -63,7 +63,7 @@ proxyLoop serverData clientData = do
   proxyLoop' serverSource (appSink serverData) clientSource (appSink clientData)
 
 proxyLoop' :: (MonadIO m) =>
-              ResumableSource m (Either String Op)
+              ResumableSource m (Either BS.ByteString Op)
               -> Sink BS.ByteString m a1
               -> ResumableSource m Response
               -> Sink BS.ByteString m a

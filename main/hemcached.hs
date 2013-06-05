@@ -30,10 +30,10 @@ main = do
       =$ putResponseText
       =$ (appSink appData)
 
-process :: MonadIO m => MVar (HashTable Key Value) -> ConduitM (Either String Op) Response m ()
+process :: MonadIO m => MVar (HashTable Key Value) -> ConduitM (Either BS.ByteString Op) Response m ()
 process htVar = do
-  mOpType <- await
-  case mOpType of
+  meOp <- await
+  case meOp of
     Nothing -> return ()
     Just (Left msg) -> do
       yield Error
