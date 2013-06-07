@@ -193,7 +193,7 @@ stats client = statsWithArgs client []
 statsWithArgs :: (MonadIO m) => Client -> [String] -> m ([(String, String)])
 statsWithArgs client args = do
   let socket = clientSocket client
-  liftIO $ send socket $ StatsOp args
+  liftIO $ send socket $ StatsOp (map BS.pack args)
   resp <- getResponse socket []    
   return (Prelude.reverse resp)
   where

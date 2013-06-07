@@ -32,10 +32,10 @@ module Network.Memcache.Response (
 import Prelude hiding (takeWhile, take)
 import qualified Data.ByteString.Char8 as BS
 import Data.Word
+import Data.Char
 import Data.Attoparsec.ByteString.Char8
 import qualified Data.Attoparsec.ByteString.Lazy as AL
 import Control.Applicative
-import Data.Char
 
 import Debug.Trace
 
@@ -80,10 +80,10 @@ responseHeaderParser :: Parser Response
 responseHeaderParser = responseParser' True
 
 responseParser' :: Bool -> Parser Response
-responseParser' onlyHeader = try commandParser <|> codeParser
+responseParser' onlyHeader = try parser <|> codeParser
   where
-    commandParser :: Parser Response
-    commandParser = do
+    parser :: Parser Response
+    parser = do
       cmd <- skipWhile (== ' ') *> takeWhile (\c -> isAlphaNum c || c == '_')
       resp <- case {- trace ("cmd: " ++ show cmd) -} cmd of
         "VALUE"        -> do
@@ -113,7 +113,7 @@ responseParser' onlyHeader = try commandParser <|> codeParser
                           <$> (skipWhile (== ' ') *> takeWhile (/= ' '))
                           <*> (skipWhile (== ' ') *> AL.takeTill isEndOfLine)
         "VERSION"      -> Version <$> (skipWhile (== ' ') *> AL.takeTill isEndOfLine)
-        _              -> fail $ "unknown command " ++ BS.unpack cmd
+        _              -> fail $ "unknown response " ++ BS.unpack cmd
       _ <- endline
       return (resp)
 
@@ -142,9 +142,6 @@ parseResponse' onlyHeader input = let r = parse (responseParser' onlyHeader) inp
     Done _ result -> Just result
     Fail {} -> Nothing
     Partial {} -> Nothing
---      let r'' = feed r' "" in case trace (show r'') r'' of
---        Done _ result -> Just result
---        _ -> Nothing
   Done _ result -> Just result
 
 {-|

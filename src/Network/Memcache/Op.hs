@@ -40,14 +40,20 @@ module Network.Memcache.Op (
   , toOptions
   , keyOf
   , bytesOf
+  , parseOp
   , parseOpHeader
+  , opParser
+  , opHeaderParser
   , updateOpValue
   ) where
 
+import Prelude hiding (take, takeWhile)
 import qualified Data.ByteString.Char8 as BS
 import Data.Word
-import Data.List
+import Data.Char
 import Data.Maybe
+import Data.Attoparsec.ByteString.Char8
+import Control.Applicative
 
 type ValueT = BS.ByteString
 type BytesT = Word64
@@ -123,7 +129,7 @@ data Op =
   | FlushAllOp
   | VersionOp
   | QuitOp
-  | StatsOp { args :: [String] }
+  | StatsOp { args :: [BS.ByteString] }
  deriving (Show, Read, Eq)
 
 toOptions :: [BS.ByteString] -> Maybe [Option]
@@ -205,6 +211,102 @@ isNoreplyOp op = case op of
   TouchOp { options = os }   -> elem Noreply os
   _ -> False
 
+
+-- parse op header
+{-|
+  parse an operation
+-}
+parseOp :: BS.ByteString -> Maybe Op
+parseOp = parseOp' False
+
+{-|
+  parse an operation but only its header
+-}
+parseOpHeader :: BS.ByteString -> Maybe Op
+parseOpHeader = parseOp' True
+
+parseOp' :: Bool -> BS.ByteString -> Maybe Op
+parseOp' onlyHeader input = let r = parse (opParser' onlyHeader) input in case r of
+  Fail {} -> Nothing
+  Partial parse' -> let r' = parse' "\r\n" in case r' of
+    Done _ result -> Just result
+    Fail {} -> Nothing
+    Partial {} -> Nothing
+  Done _ result -> Just result
+
+opParser :: Parser Op
+opParser = opParser' False
+
+opHeaderParser :: Parser Op
+opHeaderParser = opParser' True
+
+opParser' :: Bool -> Parser Op
+opParser' onlyHeader = parser
+  where
+    parser :: Parser Op
+    parser = do
+      cmd <- ws *> takeWhile (\c -> isAlphaNum c || c == '_') <* ws
+      case cmd of
+        "get"       -> GetOp <$> (keys <* endline)
+        "gets"      -> GetsOp <$> (keys <* endline)
+        "set"       -> op_set' SetOp
+        "add"       -> op_set' AddOp
+        "replace"   -> op_set' ReplaceOp
+        "append"    -> op_set' AppendOp
+        "prepend"   -> op_set' PrependOp
+        "cas"       -> op_cas
+        "incr"      -> IncrOp   <$> (key <* ws) <*> (decimal <* ws) <*> (options <* endline)
+        "decr"      -> DecrOp   <$> (key <* ws) <*> (decimal <* ws) <*> (options <* endline)
+        "delete"    -> DeleteOp <$> (key <* ws) <*> (options <* endline)
+        "touch"     -> TouchOp  <$> (key <* ws) <*> (decimal <* ws) <*> (options <* endline)
+        "flush_all" -> pure FlushAllOp <* endline
+        "version"   -> pure VersionOp <* endline
+        "quit"      -> pure QuitOp <* endline
+        "ping"      -> pure PingOp <* endline
+        "stats"     -> StatsOp <$> (words <* endline)
+        _           -> fail ""
+
+    keys = words
+    
+    key = word
+
+    words = many1 (key <* ws)
+    
+    word = takeWhile (\c -> c /= ' ' && c /= '\r' && c/= '\n')
+
+    ws :: Parser ()
+    ws = skipWhile (== ' ')
+
+    endline :: Parser BS.ByteString
+    endline = try (string "\r\n") <|> string "\n" <|> string "\r"
+
+    options = do
+      mopts <- toOptions <$> words
+      case mopts of
+        Just opts -> return (opts)
+        Nothing -> fail "invalid options"
+
+    -- set <key> <flags> <exptime> <size> [<options>] -> STORED
+    op_set' op = do
+      op'   <- op <$> (key <* ws) <*> (decimal <* ws) <*> (decimal <* ws)
+      size  <- decimal <* ws :: Parser Word64
+      opts  <- options <* endline
+      value <- if onlyHeader then pure BS.empty else (take (fromIntegral size) <* endline)
+      return (op' size value opts)
+
+    -- cas <key> <flags> <exptime> <size> <version> [<option>] -> STORED
+    op_cas = do
+      op'   <- CasOp <$> (key <* ws) <*> (decimal <* ws) <*> (decimal <* ws)
+      size  <- decimal <* ws :: Parser Word64
+      ver   <- decimal <* ws
+      opts  <- options <* endline
+      value <- if onlyHeader then pure BS.empty else (take (fromIntegral size) <* endline)
+      return (op' size ver value opts)
+
+
+{-|
+  convert a response to bytestring chunks
+-}
 toChunks :: Op -> [BS.ByteString]
 toChunks op = case op of
   PingOp -> ["ping", ln]
@@ -234,7 +336,7 @@ toChunks op = case op of
   QuitOp -> ["quit", ln]
   StatsOp args -> case args of
     [] -> ["stats", ln]
-    _ -> ["stats ", BS.pack $ intercalate " " args, ln]
+    _ -> ["stats ", BS.intercalate " " args, ln]
   where
     ln = BS.pack "\r\n"
     show' a = BS.pack $ show a
@@ -245,129 +347,3 @@ toChunks op = case op of
     incrdecrop cmd key value' options =
       [BS.concat [cmd, " ", key, " ", show' value', showopt options, ln]]
 
--- parse op header
-parseOpHeader :: BS.ByteString -> Maybe Op
-parseOpHeader headerLine = 
-  case filter (\x -> not (BS.null x)) (BS.split ' ' headerLine) of
-    [] -> Nothing
-    (cmd:args) -> parseOpHeader' cmd args
-
-parseOpHeader' :: BS.ByteString -> [BS.ByteString] -> Maybe Op
-parseOpHeader' cmd args
-  | cmd == "get"       = op_get args
-  | cmd == "gets"      = op_gets args
-  | cmd == "set"       = op_set' SetOp args
-  | cmd == "add"       = op_set' AddOp args
-  | cmd == "replace"   = op_set' ReplaceOp args
-  | cmd == "append"    = op_set' AppendOp args
-  | cmd == "prepend"   = op_set' PrependOp args
-  | cmd == "cas"       = op_cas args
-  | cmd == "incr"      = op_incr args
-  | cmd == "decr"      = op_decr args
-  | cmd == "delete"    = op_delete args
-  | cmd == "touch"     = op_touch args
-  | cmd == "flush_all" = op_flush_all args
-  | cmd == "version"   = op_version args
-  | cmd == "quit"      = op_quit args
-  | cmd == "ping"      = op_ping args
-  | cmd == "stats"     = op_stats args
-  | otherwise = Nothing
-  where
-    -- get <key1> <key2> ...
-    op_get args
-      | null args = Nothing
-      | otherwise = Just $ GetOp args
-
-    -- gets <key1> <key2> ...
-    op_gets args
-      | null args = Nothing
-      | otherwise = Just $ GetsOp args
-
-    -- set <key> <flags> <exptime> <size> [<options>] -> STORED
-    op_set' op (key:args) = case parseStorageArgs args of
-      Just (flag, expire, size, options) -> Just $ op key flag expire size "" options
-      Nothing -> Nothing
-    op_set' _ _ = Nothing
-
-    parseStorageArgs :: [BS.ByteString] -> Maybe (Word32, Word64, BytesT, [Option])
-    parseStorageArgs (flag:expire:size:options) = do
-      flag' <- readWord flag
-      size' <- readWord64 size
-      expire' <- readWord64 expire
-      options' <- toOptions options
-      return $ (fromIntegral flag', expire', size', options')
-    parseStorageArgs _ = Nothing
-
-    -- cas <key> <flags> <exptime> <size> <version> [<option>] -> STORED
-    op_cas (key:flag:expire:size:version:options) =
-      case parseStorageArgs (flag:expire:size:options) of
-        Just (flag', expire', size', options') -> case readWord64 version of
-          Just version' -> Just $ CasOp key flag' expire' size' version' "" options'
-          Nothing -> Nothing
-        Nothing-> Nothing
-    op_cas _ = Nothing
-
-    -- incr <key> <value> <options>
-    op_incr = op_incr' IncrOp
-
-    op_incr' opConstructor (key:value:options) = do
-      case readWord64 value of
-        Just value' ->
-          case toOptions options of
-            Just os -> Just $ opConstructor key value' os
-            Nothing -> Nothing
-        Nothing -> Nothing
-    op_incr' _ _ = Nothing
-
-    -- decr <key> <value> <options>
-    op_decr = op_incr' DecrOp
-
-    -- delete <key>
-    op_delete (key:options) = case toOptions options of
-      Just os -> if BS.null key then Nothing else Just $ DeleteOp key os
-      Nothing -> Nothing
-    op_delete _ = Nothing
-
-    -- touch <key> <expire> <options>
-    op_touch (key:expire:options) = do
-      case readWord64 expire of
-        Just expire' ->
-          case toOptions options of
-            Just options' -> if BS.null key then Nothing else Just $ TouchOp key expire' options'
-            Nothing -> Nothing
-        Nothing -> Nothing
-    op_touch _ = Nothing
-
-    -- flush_all
-    op_flush_all [] = Just $ FlushAllOp
-    op_flush_all _  = Nothing
-
-    -- version
-    op_version [] = Just $ VersionOp
-    op_version _  = Nothing
-
-    -- quit
-    op_quit [] = Just $ QuitOp
-    op_quit _  = Nothing
-
-    -- ping
-    op_ping [] = Just $ PingOp
-    op_ping _ = Nothing
-
-    -- stats
-    op_stats args = Just $ StatsOp (map BS.unpack args)
-
-readInt :: BS.ByteString -> Maybe Int
-readInt x = case BS.readInt x of
-  Just (v, rest) -> if BS.null rest then Just v else Nothing
-  Nothing -> Nothing
-
-readWord :: BS.ByteString -> Maybe Word
-readWord x = case BS.readInteger x of
-  Just (v, rest) -> if BS.null rest then Just (fromIntegral v) else Nothing
-  Nothing -> Nothing
-
-readWord64 :: BS.ByteString -> Maybe Word64
-readWord64 x = case BS.readInteger x of
-  Just (v, rest) -> if BS.null rest then Just (fromIntegral v) else Nothing
-  Nothing -> Nothing
