@@ -43,7 +43,7 @@ import Control.Monad.IO.Class
 import Network.Memcache.Class
 import Network.Memcache.IO
 
-instance Message Network.Memcache.Response.Response where
+instance Message Response where
   parseHeader = parseResponseHeader
 
   toChunks = Network.Memcache.Response.toChunks

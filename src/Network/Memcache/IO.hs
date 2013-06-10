@@ -13,7 +13,7 @@ import Network.Memcache.Class
 send :: (MonadIO m, Message a) => Handle -> a -> m ()
 send handle msg = liftIO $ do
   -- TODO this should be done by writev() system call (vector I/O).
-  BS.hPutStr handle $ BS.concat (Network.Memcache.Class.toChunks msg)
+  BS.hPutStr handle $ BS.concat (toChunks msg)
   hFlush handle
 
 -- receive a message

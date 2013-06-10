@@ -72,9 +72,9 @@ instance Read Option where
     "noreply" -> [(Noreply, "")]
     _ -> error "no parse"
 
-instance Message Network.Memcache.Op.Op where
+instance Message Op where
   parseHeader = parseOpHeader
-
+  
   toChunks = Network.Memcache.Op.toChunks
 
   recvContent handle op
