@@ -146,7 +146,7 @@ prop_toChunks_QuitOp :: Bool
 prop_toChunks_QuitOp = chunk2string (toChunks QuitOp) == "quit" ++ ln
 
 prop_toChunks_StatsOp :: [PrintableString] -> Bool
-prop_toChunks_StatsOp args = chunk2string (toChunks $ StatsOp (map getPrintableString args)) == "stats" ++ concat (map (\s -> " " ++ getPrintableString s) args) ++ ln
+prop_toChunks_StatsOp args = chunk2string (toChunks $ StatsOp (map (BS.pack . getPrintableString) args)) == "stats" ++ concat (map (\s -> " " ++ getPrintableString s) args) ++ ln
 
 --------------------------------
 
@@ -220,7 +220,7 @@ prop_parseOpHeader_QuitOp :: Bool
 prop_parseOpHeader_QuitOp = parseOpHeader "quit" == Just (QuitOp)
 
 prop_parseOpHeader_StatsOp :: [PrintableString] -> Bool
-prop_parseOpHeader_StatsOp stats = parseOpHeader (BS.pack $ "stats" ++ concat (map (\s -> " " ++ getPrintableString s) stats)) == Just (StatsOp (map getPrintableString stats))
+prop_parseOpHeader_StatsOp stats = parseOpHeader (BS.pack $ "stats" ++ concat (map (\s -> " " ++ getPrintableString s) stats)) == Just (StatsOp (map (BS.pack . getPrintableString) stats))
 
 --------------------------------
 
@@ -274,9 +274,10 @@ ln = "\r\n"
 showOptions options = (concat $ map (\o -> " " ++ show o) options)
 
 parseOpHeader_SetOp :: String -> (BS.ByteString -> Word32 -> Word64 -> BytesT -> ValueT -> [Option] -> Op) -> Key -> Word32 -> Word64 -> [Option] -> ValueT -> Bool
-parseOpHeader_SetOp cmd opType key flags exptime options value = op == Just (opType key' flags exptime (fromIntegral $ BS.length value) "" options)
+parseOpHeader_SetOp cmd opType key flags exptime options value = if op == expected then True else trace ("expected: " ++ show expected ++ " but: " ++ show op) False
  where
    key' = getKey key
+   expected = Just (opType key' flags exptime (fromIntegral $ BS.length value) "" options)
    op = parseOpHeader (BS.pack (cmd ++ " " ++ BS.unpack key' ++ " " ++ show flags ++ " " ++ show exptime ++ " " ++ show (BS.length value) ++ showOptions options))
 
 

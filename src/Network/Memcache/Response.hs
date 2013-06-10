@@ -84,10 +84,10 @@ responseParser' onlyHeader = try parser <|> codeParser
   where
     parser :: Parser Response
     parser = do
-      cmd <- skipWhile (== ' ') *> takeWhile (\c -> isAlphaNum c || c == '_')
+      cmd <- skipWhile (== ' ') *> takeWhile1 (\c -> isAlphaNum c || c == '_')
       resp <- case {- trace ("cmd: " ++ show cmd) -} cmd of
         "VALUE"        -> do
-          key     <- skipWhile (== ' ') *> takeWhile (\c -> c /= ' ')
+          key     <- skipWhile (== ' ') *> takeWhile1 (\c -> c /= ' ')
           flags   <- skipWhile (== ' ') *> decimal
           len     <- skipWhile (== ' ') *> decimal
           version <- skipWhile (== ' ') *> try (fmap Just decimal) <|> return (Nothing) <* skipWhile (== ' ')
@@ -110,7 +110,7 @@ responseParser' onlyHeader = try parser <|> codeParser
         "SERVER_ERROR" -> ServerError <$> (skipWhile (== ' ') *> fmap BS.unpack (AL.takeTill isEndOfLine))
         "CLIENT_ERROR" -> ClientError <$> (skipWhile (== ' ') *> fmap BS.unpack (AL.takeTill isEndOfLine))
         "STAT"         -> Stat
-                          <$> (skipWhile (== ' ') *> takeWhile (/= ' '))
+                          <$> (skipWhile (== ' ') *> takeWhile1 (/= ' '))
                           <*> (skipWhile (== ' ') *> AL.takeTill isEndOfLine)
         "VERSION"      -> Version <$> (skipWhile (== ' ') *> AL.takeTill isEndOfLine)
         _              -> fail $ "unknown response " ++ BS.unpack cmd

@@ -55,6 +55,8 @@ import Data.Maybe
 import Data.Attoparsec.ByteString.Char8
 import Control.Applicative
 
+import Debug.Trace
+
 type ValueT = BS.ByteString
 type BytesT = Word64
 data Option = Noreply deriving (Eq)
@@ -245,7 +247,7 @@ opParser' onlyHeader = parser
   where
     parser :: Parser Op
     parser = do
-      cmd <- ws *> takeWhile (\c -> isAlphaNum c || c == '_') <* ws
+      cmd <- ws *> takeWhile1 (\c -> isAlphaNum c || c == '_') <* ws
       case cmd of
         "get"       -> GetOp <$> (keys <* endline)
         "gets"      -> GetsOp <$> (keys <* endline)
@@ -266,13 +268,13 @@ opParser' onlyHeader = parser
         "stats"     -> StatsOp <$> (words <* endline)
         _           -> fail ""
 
-    keys = words
+    keys = many1 (key <* ws)
     
     key = word
 
-    words = many1 (key <* ws)
+    words = many (word <* ws)
     
-    word = takeWhile (\c -> c /= ' ' && c /= '\r' && c/= '\n')
+    word = takeWhile1 (\c -> c /= ' ' && c /= '\r' && c/= '\n')
 
     ws :: Parser ()
     ws = skipWhile (== ' ')
@@ -291,7 +293,7 @@ opParser' onlyHeader = parser
       op'   <- op <$> (key <* ws) <*> (decimal <* ws) <*> (decimal <* ws)
       size  <- decimal <* ws :: Parser Word64
       opts  <- options <* endline
-      value <- if onlyHeader then pure BS.empty else (take (fromIntegral size) <* endline)
+      value <- if onlyHeader then pure BS.empty else (take (fromIntegral size) <* ws <* endline)
       return (op' size value opts)
 
     -- cas <key> <flags> <exptime> <size> <version> [<option>] -> STORED
@@ -300,7 +302,7 @@ opParser' onlyHeader = parser
       size  <- decimal <* ws :: Parser Word64
       ver   <- decimal <* ws
       opts  <- options <* endline
-      value <- if onlyHeader then pure BS.empty else (take (fromIntegral size) <* endline)
+      value <- if onlyHeader then pure BS.empty else (take (fromIntegral size) <* ws <* endline)
       return (op' size ver value opts)
 
 
