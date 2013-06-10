@@ -1,5 +1,5 @@
 
-module Network.Memcache.IO (send, recv, readBytes, chompLine) where
+module Network.Memcache.IO (send, recv, readBytes) where
 
 import Control.Monad.IO.Class
 import System.IO
@@ -20,16 +20,10 @@ send handle msg = liftIO $ do
 recv :: (MonadIO m, Message a) => Handle -> m (Maybe a)
 recv handle = liftIO $ do
   l <- BS.hGetLine handle
-  case parseHeader $ chompLine l of
+  case parseHeader l of
     Just msg -> recvContent handle msg
     Nothing -> return Nothing
 
 readBytes :: Handle -> Word64 -> IO (BS.ByteString)
 readBytes handle len = BS.hGet handle (fromIntegral len)
 
-chompLine :: BS.ByteString -> BS.ByteString
-chompLine str
-  | BS.null str = str
-  | BS.isSuffixOf (BS.pack "\r\n") str = BS.take (BS.length str - 2) str
-  | BS.isSuffixOf (BS.pack "\n") str || BS.isSuffixOf (BS.pack "\r") str = BS.take (BS.length str - 1) str
-  | otherwise = str
