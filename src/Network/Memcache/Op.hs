@@ -55,7 +55,7 @@ import Data.Attoparsec.ByteString.Char8
 import Control.Applicative
 import Control.Monad.IO.Class
 
-import Debug.Trace
+-- import Debug.Trace
 
 import Network.Memcache.Class
 
@@ -76,12 +76,6 @@ instance Message Network.Memcache.Op.Op where
 
   toChunks = Network.Memcache.Op.toChunks
 
-  recv handle = liftIO $ do
-    l <- BS.hGetLine handle
-    case parseHeader $ chompLine l of
-      Just op -> recvContent handle op
-      Nothing -> return Nothing
-
   recvContent handle op
     | isStorageOp op = liftIO $ case bytesOf op of
         Just bytes -> do
@@ -89,8 +83,7 @@ instance Message Network.Memcache.Op.Op where
           _term <- BS.hGetLine handle
           return $ Just $ updateOpValue op content
         Nothing -> return $ Just op
-    | otherwise = do
-        return $ Just op
+    | otherwise = return $ Just op
 
 data Op = 
   -- storage commands

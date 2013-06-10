@@ -38,7 +38,7 @@ import qualified Data.Attoparsec.ByteString.Lazy as AL
 import Control.Applicative
 import Control.Monad.IO.Class
 
-import Debug.Trace
+-- import Debug.Trace
 
 import Network.Memcache.Class
 
