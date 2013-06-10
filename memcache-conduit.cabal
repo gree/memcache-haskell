@@ -9,16 +9,16 @@ Cabal-Version:  >=1.8
 
 Library
   Ghc-Options:     -O2 -Wall
-  Build-Depends:   base >=4 && <5
+  Build-Depends:   base               >=4 && <5
                  , bytestring
-                 , network >= 2.3.2
+                 , network            >= 2.3.2
                  , split
                  , mtl
                  , conduit
                  , attoparsec
                  , attoparsec-binary
                  , attoparsec-conduit
-                 , memcache-haskell
+                 , memcache-haskell   >= 0.0.2
   Hs-source-dirs:  src
   Exposed-modules: Data.Conduit.Memcache
   Extensions:      DeriveDataTypeable
@@ -27,7 +27,10 @@ Library
 Executable hemcached
   Ghc-Options:     -threaded -O2 -Wall -rtsopts
   Extra-Libraries: 
-  Build-Depends:   base >= 4 && < 5, bytestring >= 0.9, stm >= 2.4, containers
+  Build-Depends:   base       >= 4 && < 5
+                 , bytestring >= 0.9
+                 , stm        >= 2.4
+                 , containers
                  , transformers
                  , resourcet
                  , mtl
@@ -43,7 +46,10 @@ Executable hemcached
 Executable memcached-proxy
   Ghc-Options:     -threaded -O2 -Wall -rtsopts
   Extra-Libraries: 
-  Build-Depends:   base >= 4 && < 5, bytestring >= 0.9, stm >= 2.4, containers
+  Build-Depends:   base       >= 4 && < 5
+                 , bytestring >= 0.9
+                 , stm        >= 2.4
+                 , containers
                  , transformers
                  , resourcet
                  , mtl
