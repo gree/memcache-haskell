@@ -39,7 +39,7 @@ import Data.Word
 import Network.Memcache.Types
 import Network.Memcache.Op
 import Network.Memcache.Response
-import Network.Memcache.Message
+import Network.Memcache.Class
 
 data Client = MemcachedClient {
     clientNodekey :: String

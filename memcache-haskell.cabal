@@ -22,7 +22,7 @@ Library
   Exposed-modules: Network.Memcache
                  , Network.Memcache.Response
                  , Network.Memcache.Op
-                 , Network.Memcache.Message
+                 , Network.Memcache.Class
                  , Network.Memcache.Client
                  , Network.Memcache.Stats
                  , Network.Memcache.Util

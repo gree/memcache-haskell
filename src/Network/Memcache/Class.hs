@@ -1,5 +1,5 @@
 
-module Network.Memcache.Message (Message(..)) where
+module Network.Memcache.Class (Message(..)) where
 
 import System.IO
 import qualified Data.ByteString.Char8 as C
@@ -23,7 +23,7 @@ class Message a where
   -- send a message using toChunks (default impl.)
   send handle msg = do
     -- TODO this should be done by writev() system call (vector I/O).
-    C.hPutStr handle $ C.concat (Network.Memcache.Message.toChunks msg)
+    C.hPutStr handle $ C.concat (Network.Memcache.Class.toChunks msg)
     hFlush handle
 
   recv handle = do
