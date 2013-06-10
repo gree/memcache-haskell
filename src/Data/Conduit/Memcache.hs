@@ -12,6 +12,7 @@ import qualified Data.ByteString.Char8 as BS
 import Data.Conduit
 import Data.Conduit.Attoparsec
 
+import Network.Memcache.Class
 import Network.Memcache.Op
 import Network.Memcache.Response
 
@@ -58,7 +59,7 @@ putResponseText = do
   case mResp of
     Nothing -> return ()
     Just resp -> do
-      mapM_ yield $ Network.Memcache.Response.toChunks resp
+      mapM_ yield $ toChunks resp
       -- yield $ BS.concat $ Network.Memcache.Response.toChunks resp
       putResponseText
 
@@ -68,7 +69,7 @@ putOpText = do
   case mOp of
     Nothing -> return ()
     Just op -> do
-      mapM_ yield $ Network.Memcache.Op.toChunks op
+      mapM_ yield $ toChunks op
       -- yield $ BS.concat $ Network.Memcache.Op.toChunks op
       putOpText
 
