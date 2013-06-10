@@ -2,9 +2,11 @@
 
 module Data.Conduit.Memcache (getOpText, getResponseText, putOpText, putResponseText) where
 
+import Prelude hiding (takeWhile)
 import Control.Monad.Trans
 -- import Control.Monad.IO.Class
 import Control.Applicative
+import qualified Data.Attoparsec.ByteString as AB
 import Data.Attoparsec.ByteString.Char8
 -- import Data.Attoparsec.Binary
 import qualified Data.Attoparsec.ByteString.Lazy as AL
@@ -23,20 +25,10 @@ getOpText' :: (MonadIO m, MonadThrow m) => ConduitM BS.ByteString (PositionRange
 getOpText' = conduitParser command
   where
     command :: Parser (Either BS.ByteString Op)
-    command = do
-      header <- skipSpace' *> AL.takeTill isEndOfLine <* endline
-      case parseOpHeader header of
-        Nothing -> return (Left header)
-        Just op -> do
-          if isStorageOp op
-            then do
-            case bytesOf op of
-              Just bytes -> do
-                content <- AL.take (fromIntegral bytes) <* endline
-                return (Right $ updateOpValue op content)
-              Nothing -> return (Right op)
-            else do
-            return (Right op)
+    command = try (Right <$> opParser) <|> (Left <$> (AB.takeWhile (\c -> c /= 10 && c /= 13) <* endline))
+
+    endline :: Parser BS.ByteString
+    endline = try (string "\r\n") <|> string "\n" <|> string "\r"
 
 removePR :: (MonadIO m, MonadThrow m) => ConduitM (PositionRange, t) t m ()
 removePR = do
@@ -72,12 +64,4 @@ putOpText = do
       mapM_ yield $ toChunks op
       -- yield $ BS.concat $ Network.Memcache.Op.toChunks op
       putOpText
-
-----
-
-endline :: Parser BS.ByteString
-endline = try (string "\r\n") <|> string "\n" <|> string "\r"
-
-skipSpace' :: Parser ()
-skipSpace' = skipWhile (== ' ')
 
