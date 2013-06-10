@@ -35,7 +35,6 @@ module Network.Memcache.Op (
   , isReadOp
   , isNoreplyOp
   , isStorageOp
-  , toChunks
   , toOption
   , toOptions
   , keyOf
@@ -57,6 +56,8 @@ import Control.Applicative
 
 import Debug.Trace
 
+import Network.Memcache.Class
+
 type ValueT = BS.ByteString
 type BytesT = Word64
 data Option = Noreply deriving (Eq)
@@ -69,6 +70,26 @@ instance Read Option where
     "noreply" -> [(Noreply, "")]
     _ -> error "no parse"
 
+instance Message Network.Memcache.Op.Op where
+  parseHeader = parseOpHeader
+
+  toChunks = Network.Memcache.Op.toChunks
+
+  recv handle = do
+    l <- BS.hGetLine handle
+    case parseHeader $ chompLine l of
+      Just op -> recvContent handle op
+      Nothing -> return Nothing
+
+  recvContent handle op
+    | isStorageOp op = case bytesOf op of
+        Just bytes -> do
+          content <- readBytes handle bytes
+          _term <- BS.hGetLine handle
+          return $ Just $ updateOpValue op content
+        Nothing -> return $ Just op
+    | otherwise = do
+        return $ Just op
 
 data Op = 
   -- storage commands

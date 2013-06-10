@@ -18,6 +18,7 @@ import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
 import Test.QuickCheck.Arbitrary
 
+import Network.Memcache.Class
 import Network.Memcache.Op
 import qualified Network.Memcache.Response as R
 
@@ -225,7 +226,7 @@ prop_parseOpHeader_StatsOp stats = parseOpHeader (BS.pack $ "stats" ++ concat (m
 --------------------------------
 
 prop_toChunks_Value :: Key -> Word32 -> ValueT -> Maybe Word64 -> Bool
-prop_toChunks_Value key flag value version = chunk2string (R.toChunks $ R.Value key' flag len value version) == resp
+prop_toChunks_Value key flag value version = chunk2string (toChunks $ R.Value key' flag len value version) == resp
   where
     len = fromIntegral $ BS.length value
     key' = getKey key
@@ -235,7 +236,7 @@ prop_toChunks_Value key flag value version = chunk2string (R.toChunks $ R.Value 
       Nothing -> ""
 
 prop_toChunks_Ok :: Bool
-prop_toChunks_Ok = chunk2string (R.toChunks R.Ok) == "OK" ++ ln
+prop_toChunks_Ok = chunk2string (toChunks R.Ok) == "OK" ++ ln
 
 --------------------------------
 

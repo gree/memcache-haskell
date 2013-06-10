@@ -27,7 +27,7 @@ module Network.Memcache.Response (
   , parseResponseHeader
   , responseParser
   , responseHeaderParser
-  , toChunks) where
+  ) where
 
 import Prelude hiding (takeWhile, take)
 import qualified Data.ByteString.Char8 as BS
@@ -38,6 +38,23 @@ import qualified Data.Attoparsec.ByteString.Lazy as AL
 import Control.Applicative
 
 import Debug.Trace
+
+import Network.Memcache.Class
+
+instance Message Network.Memcache.Response.Response where
+  parseHeader = parseResponseHeader
+
+  toChunks = Network.Memcache.Response.toChunks
+
+  recv handle = do
+    l <- BS.hGetLine handle
+    case parseResponseHeader $ chompLine l of
+      Nothing -> return $ Just $ ServerError $ BS.unpack l
+      Just (Value key flags len _ version) -> do
+        value <- readBytes handle len
+        _term <- BS.hGetLine handle
+        return $ Just $ Value key flags len value version
+      Just resp -> return $ Just resp
 
 {-|
   response messages from memcached server
