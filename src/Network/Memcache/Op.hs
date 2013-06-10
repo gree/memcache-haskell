@@ -58,6 +58,7 @@ import Control.Monad.IO.Class
 -- import Debug.Trace
 
 import Network.Memcache.Class
+import Network.Memcache.IO
 
 type ValueT = BS.ByteString
 type BytesT = Word64

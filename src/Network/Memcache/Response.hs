@@ -41,21 +41,19 @@ import Control.Monad.IO.Class
 -- import Debug.Trace
 
 import Network.Memcache.Class
+import Network.Memcache.IO
 
 instance Message Network.Memcache.Response.Response where
   parseHeader = parseResponseHeader
 
   toChunks = Network.Memcache.Response.toChunks
 
-  recv handle = liftIO $ do
-    l <- BS.hGetLine handle
-    case parseResponseHeader $ chompLine l of
-      Nothing -> return $ Just $ ServerError $ BS.unpack l
-      Just (Value key flags len _ version) -> do
-        value <- readBytes handle len
-        _term <- BS.hGetLine handle
-        return $ Just $ Value key flags len value version
-      Just resp -> return $ Just resp
+  recvContent handle resp = case resp of
+    Value key flags len _ version -> liftIO $ do
+      value <- readBytes handle len
+      _term <- BS.hGetLine handle
+      return $ Just $ Value key flags len value version
+    _ -> return $ Just resp
 
 {-|
   response messages from memcached server

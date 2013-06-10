@@ -26,6 +26,7 @@ Library
                  , Network.Memcache.Client
                  , Network.Memcache.Stats
                  , Network.Memcache.Types
+                 , Network.Memcache.IO
   Extensions:      DeriveDataTypeable
 
 Test-Suite test-memcache

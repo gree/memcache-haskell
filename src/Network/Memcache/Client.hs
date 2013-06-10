@@ -39,7 +39,7 @@ import Data.Word
 import Network.Memcache.Types
 import Network.Memcache.Op
 import Network.Memcache.Response
-import Network.Memcache.Class
+import Network.Memcache.IO
 
 data Client = MemcachedClient {
     clientNodekey :: String
@@ -131,7 +131,7 @@ get client key0 = do
       end <- liftIO $ do
         recv socket :: IO (Maybe Response)
       case (end, decode value) of
-        (Just End, Right value) -> return (Just value)
+        (Just End, Right v) -> return (Just v)
         (_, _) -> return (Nothing)
     Just End -> return (Nothing)
     _ -> return (Nothing)
