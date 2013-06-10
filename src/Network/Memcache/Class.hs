@@ -4,6 +4,7 @@ module Network.Memcache.Class (Message(..)) where
 import Control.Monad.IO.Class
 import System.IO
 import qualified Data.ByteString.Char8 as BS
+-- import qualified Data.ByteString.Lazy as LBS
 
 class Message a where
   -- parse message header
