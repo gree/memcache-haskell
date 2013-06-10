@@ -49,8 +49,8 @@ module Network.Memcache.Op (
 import Prelude hiding (take, takeWhile)
 import qualified Data.ByteString.Char8 as BS
 import Data.Word
-import Data.Char
 import Data.Maybe
+import qualified Data.Attoparsec.ByteString as AB
 import Data.Attoparsec.ByteString.Char8
 import Control.Applicative
 import Control.Monad.IO.Class
@@ -263,7 +263,7 @@ opParser' onlyHeader = parser
   where
     parser :: Parser Op
     parser = do
-      cmd <- ws *> takeWhile1 (\c -> isAlphaNum c || c == '_') <* ws
+      cmd <- ws *> word <* ws
       case cmd of
         "get"       -> GetOp <$> (keys <* endline)
         "gets"      -> GetsOp <$> (keys <* endline)
@@ -290,10 +290,9 @@ opParser' onlyHeader = parser
 
     words = many (word <* ws)
     
-    word = takeWhile1 (\c -> c /= ' ' && c /= '\r' && c/= '\n')
+    word = AB.takeWhile1 (\c -> c /= 32 && c /= 10 && c /= 13)
 
-    ws :: Parser ()
-    ws = skipWhile (== ' ')
+    ws = AB.skipWhile (== 32)
 
     endline :: Parser BS.ByteString
     endline = try (string "\r\n") <|> string "\n" <|> string "\r"
