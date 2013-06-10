@@ -25,7 +25,6 @@ Library
                  , Network.Memcache.Class
                  , Network.Memcache.Client
                  , Network.Memcache.Stats
-                 , Network.Memcache.Util
                  , Network.Memcache.Types
   Extensions:      DeriveDataTypeable
 
