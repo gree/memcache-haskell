@@ -53,6 +53,7 @@ import Data.Char
 import Data.Maybe
 import Data.Attoparsec.ByteString.Char8
 import Control.Applicative
+import Control.Monad.IO.Class
 
 import Debug.Trace
 
@@ -75,14 +76,14 @@ instance Message Network.Memcache.Op.Op where
 
   toChunks = Network.Memcache.Op.toChunks
 
-  recv handle = do
+  recv handle = liftIO $ do
     l <- BS.hGetLine handle
     case parseHeader $ chompLine l of
       Just op -> recvContent handle op
       Nothing -> return Nothing
 
   recvContent handle op
-    | isStorageOp op = case bytesOf op of
+    | isStorageOp op = liftIO $ case bytesOf op of
         Just bytes -> do
           content <- readBytes handle bytes
           _term <- BS.hGetLine handle

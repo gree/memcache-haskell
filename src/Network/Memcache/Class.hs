@@ -1,6 +1,7 @@
 
 module Network.Memcache.Class (Message(..), readBytes, chompLine) where
 
+import Control.Monad.IO.Class
 import System.IO
 import qualified Data.ByteString.Char8 as C
 import Data.Word
@@ -11,19 +12,19 @@ class Message a where
   -- convert a message to chunks
   toChunks :: a -> [C.ByteString]
   -- send a message
-  send :: Handle -> a -> IO ()
+  send :: (MonadIO m) => Handle -> a -> m ()
   -- receive a message
-  recv :: Handle -> IO (Maybe a)
+  recv :: (MonadIO m) => Handle -> m (Maybe a)
   -- receive content of a message after receiving its header
-  recvContent :: Handle -> a -> IO (Maybe a)
+  recvContent :: (MonadIO m) => Handle -> a -> m (Maybe a)
 
   -- send a message using toChunks (default impl.)
-  send handle msg = do
+  send handle msg = liftIO $ do
     -- TODO this should be done by writev() system call (vector I/O).
     C.hPutStr handle $ C.concat (Network.Memcache.Class.toChunks msg)
     hFlush handle
 
-  recv handle = do
+  recv handle = liftIO $ do
     l <- C.hGetLine handle
     case parseHeader $ chompLine l of
       Just op -> recvContent handle op
@@ -31,12 +32,6 @@ class Message a where
 
   -- no content (default impl.)
   recvContent _h msg = return $ Just msg
-
-----------------------------------------------------------------
-
-
-----------------------------------------------------------------
-
 
 ----------------------------------------------------------------
 

@@ -36,6 +36,7 @@ import Data.Char
 import Data.Attoparsec.ByteString.Char8
 import qualified Data.Attoparsec.ByteString.Lazy as AL
 import Control.Applicative
+import Control.Monad.IO.Class
 
 import Debug.Trace
 
@@ -46,7 +47,7 @@ instance Message Network.Memcache.Response.Response where
 
   toChunks = Network.Memcache.Response.toChunks
 
-  recv handle = do
+  recv handle = liftIO $ do
     l <- BS.hGetLine handle
     case parseResponseHeader $ chompLine l of
       Nothing -> return $ Just $ ServerError $ BS.unpack l
