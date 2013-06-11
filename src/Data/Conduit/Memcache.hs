@@ -12,7 +12,7 @@ import qualified Data.ByteString.Char8 as BS
 import Data.Conduit
 import Data.Conduit.Attoparsec
 
-import Network.Memcache.Class
+import Network.Memcache.Class ()
 import Network.Memcache.Op
 import Network.Memcache.Response
 
