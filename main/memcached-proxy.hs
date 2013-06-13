@@ -65,7 +65,7 @@ proxyLoop serverData clientData = do
 proxyLoop' :: (MonadIO m) =>
               ResumableSource m (Either BS.ByteString Op)
               -> Sink BS.ByteString m a1
-              -> ResumableSource m Response
+              -> ResumableSource m (Either BS.ByteString Response)
               -> Sink BS.ByteString m a
               -> m ()
 proxyLoop' serverSource serverSink clientSource clientSink = do
@@ -85,7 +85,7 @@ proxyLoop' serverSource serverSink clientSource clientSink = do
         (clientSource', mresp) <- clientSource $$++ await
         case mresp of
           Nothing -> return ()
-          Just resp -> do
+          Just (Right resp) -> do
             yield resp $$ (putResponseText =$ serverSink)
             proxyLoop' serverSource' serverSink clientSource' clientSink
   where
@@ -93,7 +93,7 @@ proxyLoop' serverSource serverSink clientSource clientSink = do
       (clientSource', mresp) <- clientSource $$++ await
       case mresp of
         Nothing -> return (clientSource')
-        Just resp -> case resp of
+        Just (Right resp) -> case resp of
           Value {} -> do
             yield resp $$ (putResponseText =$ serverSink)
             proxyGet clientSource'

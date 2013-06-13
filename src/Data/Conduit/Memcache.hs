@@ -17,16 +17,19 @@ import Network.Memcache.Op
 import Network.Memcache.Response
 
 getOpText :: (MonadIO m, MonadThrow m) => ConduitM BS.ByteString (Either BS.ByteString Op) m ()
-getOpText = conduitParser command =$= removePR
+getOpText = conduitParser opParser' =$= removePR
   where
-    command :: Parser (Either BS.ByteString Op)
-    command = try (Right <$> opParser) <|> (Left <$> (AB.takeWhile (\c -> c /= 10 && c /= 13) <* endline))
+    opParser' :: Parser (Either BS.ByteString Op)
+    opParser' = try (Right <$> opParser)
+                <|> (Left <$> (AB.takeWhile (\c -> c /= 10 && c /= 13) <* endline))
 
-    endline :: Parser BS.ByteString
-    endline = try (string "\r\n") <|> string "\n" <|> string "\r"
+getResponseText :: (MonadIO m, MonadThrow m) => ConduitM BS.ByteString (Either BS.ByteString Response) m ()
+getResponseText = conduitParser responseParser' =$= removePR
+  where
+    responseParser' :: Parser (Either BS.ByteString Response)
+    responseParser' = try (Right <$> responseParser)
+                      <|> (Left <$> (AB.takeWhile (\c -> c /= 10 && c /= 13) <* endline))
 
-getResponseText :: (MonadIO m, MonadThrow m) => ConduitM BS.ByteString Response m ()
-getResponseText = conduitParser responseParser =$= removePR
 
 putResponseText :: MonadIO m => ConduitM Response BS.ByteString m ()
 putResponseText = do
@@ -47,6 +50,9 @@ putOpText = do
       putOpText
 
 ----------------------------------------------------------------
+
+endline :: Parser BS.ByteString
+endline = try (string "\r\n") <|> string "\n" <|> string "\r"
 
 removePR :: (MonadIO m, MonadThrow m) => ConduitM (PositionRange, t) t m ()
 removePR = do
