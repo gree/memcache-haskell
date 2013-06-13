@@ -1,5 +1,5 @@
 
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, BangPatterns #-}
 
 module Main where
 
@@ -9,6 +9,7 @@ import Data.Conduit
 import Data.Conduit.Network
 import Data.Conduit.Memcache
 import qualified Data.HashTable.IO as H
+import Network.Memcache.Class
 import Network.Memcache.Op
 import Network.Memcache.Response
 import Control.Monad
@@ -21,7 +22,7 @@ type HashTable k v = H.BasicHashTable k v
 main :: IO ()
 main = do
   setNumCapabilities 4
-  ht <- H.new
+  ht <- H.new :: IO (HashTable Key Value)
   htVar <- newMVar ht
   runTCPServer (serverSettings 13301 HostAny) $ \appData -> do
     (appSource appData)
