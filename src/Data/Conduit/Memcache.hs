@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Data.Conduit.Memcache (getOpText, getResponseText, putOpText, putResponseText) where
 
@@ -7,7 +7,6 @@ import Control.Monad.Trans
 import Control.Applicative
 import qualified Data.Attoparsec.ByteString as AB
 import Data.Attoparsec.ByteString.Char8
--- import qualified Data.Attoparsec.ByteString.Lazy as AL
 import qualified Data.ByteString.Char8 as BS
 import Data.Conduit
 import Data.Conduit.Attoparsec
@@ -23,35 +22,12 @@ getOpText = conduitParser opParser' =$= removePR
     opParser' = try (Right <$> opParser)
                 <|> (Left <$> (AB.takeWhile (\c -> c /= 10 && c /= 13) <* endline))
 
-{-
-    loop = do
-      mbs <- await
-      case mbs of
-        Just bs -> do
-          case parseOp bs of
-            Just op -> yield $ Right op
-            Nothing -> yield $ Left bs
-          loop
-        Nothing -> return ()
--}
-
 getResponseText :: (MonadIO m, MonadThrow m) => ConduitM BS.ByteString (Either BS.ByteString Response) m ()
 getResponseText = conduitParser responseParser' =$= removePR
   where
     responseParser' :: Parser (Either BS.ByteString Response)
     responseParser' = try (Right <$> responseParser)
                       <|> (Left <$> (AB.takeWhile (\c -> c /= 10 && c /= 13) <* endline))
-{-
-    loop = do
-      mbs <- await
-      case mbs of
-        Just bs -> do
-          case parseResponse bs of
-            Just op -> yield $ Right op
-            Nothing -> yield $ Left bs
-          loop
-        Nothing -> return ()
--}
 
 putResponseText :: MonadIO m => ConduitM Response BS.ByteString m ()
 putResponseText = loop
