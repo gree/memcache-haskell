@@ -66,7 +66,7 @@ data Response =
     , _resFlag    :: Word32
     , _resLen     :: Word64
     , _resValue   :: BS.ByteString
-    , _resVersion :: Maybe Word64 -- Value key flag value
+    , _resVersion :: Maybe Word64
     }
   | End
   | Stored
