@@ -44,9 +44,7 @@ process htVar = loop
       meOp <- await
       case meOp of
         Nothing -> return ()
-        Just (Left msg) -> do
-          yield Error
-          loop
+        Just (Left msg) -> yield Error >> loop
         Just (Right op) -> case op of
           SetOp key flags exptime bytes value options -> do
             with $ \ht -> do
@@ -86,31 +84,17 @@ process htVar = loop
                   insert ht key (version' + 1, value)
                   yield' options Stored
             loop
-          AppendOp key flags exptime bytes value options -> do
-            append' True key flags exptime bytes value options
-            loop
-          PrependOp key flags exptime bytes value options -> do
-            append' False key flags exptime bytes value options
-            loop
-          GetOp keys -> do
-            processGet False keys
-            yield End
-            loop
-          GetsOp keys -> do
-            processGet True keys
-            yield End
-            loop
+          AppendOp key flags exptime bytes value options -> append' True key flags exptime bytes value options >> loop
+          PrependOp key flags exptime bytes value options -> append' False key flags exptime bytes value options >> loop
+          GetOp keys -> processGet False keys >> loop
+          GetsOp keys -> processGet True keys >> loop
           DeleteOp key options -> do
             with $ \ht -> do
               delete ht key
               yield' options Deleted
             loop
-          IncrOp key value options -> do
-            incr' True key value options
-            loop
-          DecrOp key value options -> do
-            incr' False key value options
-            loop
+          IncrOp key value options -> incr' True key value options >> loop
+          DecrOp key value options -> incr' False key value options >> loop
           TouchOp key exptime options -> do
             ht <- liftIO $ takeMVar htVar
             resp <- liftIO $ do
@@ -121,22 +105,14 @@ process htVar = loop
             liftIO $ putMVar htVar ht
             yield' options resp
             loop
-          PingOp -> do
-            yield Ok
-            loop
+          PingOp -> yield Ok >> loop
           FlushAllOp -> do
-            ht <- liftIO $ takeMVar htVar
-            ht' <- liftIO $ H.new
-            liftIO $ putMVar htVar ht'
+            liftIO $ takeMVar htVar >> H.new >>= putMVar htVar
             yield Ok
             loop
-          VersionOp -> do
-            yield (Version "hemcached-0.0.1")
-            loop
+          VersionOp -> yield (Version "hemcached-0.0.1") >> loop
           QuitOp -> return ()
-          StatsOp args -> do
-            yield End
-            loop
+          StatsOp args -> yield End >> loop
 
     incr' isIncr key value options = do
       with $ \ht -> do
@@ -157,7 +133,7 @@ process htVar = loop
             insert ht key (version' + 1, BS.concat $ if isAppend then [value', value] else [value, value'])
             yield' options Stored
 
-    processGet _ [] = return ()
+    processGet _ [] = yield End
     processGet withVersion (key:rest) = do
       with $ \ht -> do
         mValue <- lookup ht key
@@ -180,6 +156,6 @@ process htVar = loop
 
     lock = liftIO $ takeMVar htVar
     
-    unlock ht= liftIO $ putMVar htVar ht
+    unlock ht = liftIO $ putMVar htVar ht
 
   
