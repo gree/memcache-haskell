@@ -25,7 +25,6 @@ type HashTable k v = H.BasicHashTable k v
 
 main :: IO ()
 main = do
-  setNumCapabilities 4
   ht <- H.new :: IO (HashTable Key Value)
   htVar <- newMVar ht
   runResourceT $ do
@@ -63,8 +62,7 @@ process htVar = loop
                   True -> do
                     insert ht key (version' + 1, value)
                     yield' options Stored
-                  False -> do
-                    yield' options Exists
+                  False -> yield' options Exists
             loop
           AddOp key flags exptime bytes value options -> do
             with $ \ht -> do
@@ -96,14 +94,11 @@ process htVar = loop
           IncrOp key value options -> incr' True key value options >> loop
           DecrOp key value options -> incr' False key value options >> loop
           TouchOp key exptime options -> do
-            ht <- liftIO $ takeMVar htVar
-            resp <- liftIO $ do
-              mValue <- H.lookup ht key
+            with $ \ht -> do
+              mValue <- lookup ht key
               case mValue of
-                Nothing -> return (NotFound)
-                Just (_, value) -> return (Touched) -- XXX
-            liftIO $ putMVar htVar ht
-            yield' options resp
+                Nothing -> yield' options NotFound
+                Just (_, value) -> yield' options Touched -- XXX
             loop
           PingOp -> yield Ok >> loop
           FlushAllOp -> do
@@ -121,7 +116,7 @@ process htVar = loop
           Nothing -> yield' options NotFound
           Just (version', value') -> do
             let r = if isIncr then read (BS.unpack value') + value else read (BS.unpack value') - value
-            insert ht key (version' + 1, (BS.pack $ show r))
+            insert ht key (version' + 1, BS.pack $ show r)
             yield' options $ Code r
 
     append' isAppend key flags exptime bytes value options = do
