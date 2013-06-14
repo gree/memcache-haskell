@@ -106,14 +106,14 @@ responseParser' onlyHeader = try parser <|> codeParser
         "VALUE"        -> do
           key     <- skipWhile (== ' ') *> takeWhile1 (\c -> c /= ' ')
           flags   <- skipWhile (== ' ') *> decimal
-          len     <- skipWhile (== ' ') *> decimal
-          version <- skipWhile (== ' ') *> try (fmap Just decimal) <|> return (Nothing) <* skipWhile (== ' ')
+          len     <- skipWhile (== ' ') *> decimal :: Parser Word64
+          version <- skipWhile (== ' ') *> try (Just <$> decimal) <|> return (Nothing) <* skipWhile (== ' ')
           if onlyHeader
             then do
-              return (Value key flags (fromIntegral len) "" version)
+              return (Value key flags len "" version)
             else do
-              value <- endline *> take len
-              return (Value key flags (fromIntegral len) value version)
+              value <- endline *> take (fromIntegral len) -- XXX
+              return (Value key flags len value version)
         "END"          -> pure End
         "STORED"       -> pure Stored
         "NOT_STORED"   -> pure NotStored
