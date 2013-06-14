@@ -1,5 +1,5 @@
 Name:           memcache-conduit
-Version:        0.0.1
+Version:        0.0.2
 Description:    Memcached Protocol Conduit
 License:        OtherLicense
 Author:         Kiyoshi Ikehara
