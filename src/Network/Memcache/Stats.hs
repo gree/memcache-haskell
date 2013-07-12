@@ -165,13 +165,13 @@ getBytesRead = getValueAs "bytes_read"
 {-|
   bytes_written (64u)
 -}
-getBytesWritten :: StatsList -> Maybe Int64
+getBytesWritten :: StatsList -> Maybe Word64
 getBytesWritten = getValueAs "bytes_written"
 
 {-|
   limit_maxbytes (32u)
 -}
-getLimitMaxbytes :: StatsList -> Maybe Int64
+getLimitMaxbytes :: StatsList -> Maybe Word64
 getLimitMaxbytes = getValueAs "limit_maxbytes"
 
 {-|
