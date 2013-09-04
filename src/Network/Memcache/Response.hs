@@ -32,7 +32,6 @@ module Network.Memcache.Response (
 import Prelude hiding (takeWhile, take)
 import qualified Data.ByteString.Char8 as BS
 import Data.Word
-import Data.Char
 import qualified Data.Attoparsec.ByteString as AB
 import Data.Attoparsec.ByteString.Char8
 import qualified Data.Attoparsec.ByteString.Lazy as AL
@@ -134,12 +133,6 @@ responseParser' onlyHeader = try parser <|> codeParser
       _ <- endline
       return (resp)
 
-    keys = many1 (key <* ws)
-    
-    key = word
-
-    words = many (word <* ws)
-    
     word = AB.takeWhile1 (\c -> c /= 32 && c /= 10 && c /= 13)
 
     ws = AB.skipWhile (== 32)
