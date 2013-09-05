@@ -1,4 +1,6 @@
 
+{- | This is a utility module for client application.
+-}
 module Network.Memcache.Client (
     Client
   , StatsList
@@ -15,10 +17,11 @@ module Network.Memcache.Client (
   , set
   , add
   , replace
-  , get              
-  , delete           
+  , get
+  , gets
+  , delete
   , incr
-  , decr       
+  , decr
   -- Other Operations
   , ping
   , flushAll
@@ -41,6 +44,8 @@ import Network.Memcache.Op
 import Network.Memcache.Response
 import Network.Memcache.IO
 
+{- | Client is a handler for a memcached session.
+-}
 data Client = MemcachedClient {
     clientNodekey :: String
   , clientSocket :: Handle
@@ -49,7 +54,11 @@ data Client = MemcachedClient {
 type StatsList = [(String, String)]
 type Nodekey = String
 
-openClient :: (MonadIO m) => Nodekey -> m (Maybe Client)
+{- | Open a client session and return a client handler.
+-}
+openClient :: (MonadIO m)
+              => Nodekey          -- ^ node key (eg. \"127.0.0.1:11211\")
+              -> m (Maybe Client) -- ^ client handler
 openClient nodekey = case hostnameAndPort nodekey of
   Just (hostname, port) -> do
     let portNumber = PortNumber (fromIntegral port)
@@ -57,7 +66,11 @@ openClient nodekey = case hostnameAndPort nodekey of
     return $ Just $ MemcachedClient nodekey socket
   Nothing -> return Nothing
 
-closeClient :: (MonadIO m) => Client -> m ()
+{- | Close a client session.
+-}
+closeClient :: (MonadIO m)
+               => Client -- ^ client handler
+               -> m ()
 closeClient client = do
   let hSocket = clientSocket client
   liftIO $ do
@@ -70,11 +83,18 @@ closeClient client = do
       hFlush hSocket
       return ()
 
--- Utility
-
+{- | Connect and execute an action.
+-}
 withClient :: Nodekey -> (Client -> IO (Maybe a)) -> IO (Maybe a)
 withClient nodekey = withClients [nodekey]
 
+{- | Connect to one of given hosts and execute an action.
+
+>  main = do
+>    ret <- withClient ["127.0.0.1:11211"] $ \client -> get client "key"
+>    print ret
+
+-}
 withClients :: [Nodekey] -> (Client -> IO (Maybe a)) -> IO (Maybe a)
 withClients nodekeys act = bracket (allocate nodekeys) release invoke
   where
@@ -92,13 +112,22 @@ withClients nodekeys act = bracket (allocate nodekeys) release invoke
       Just c -> act c
       Nothing -> return Nothing
 
+{- | Connect to the given hosts one by one and execute the action for each client.
+
+>  main = do
+>    ret <- forEachClient ["192.168.0.1:11211", "192.168.0.2:11211"] $ flushAll
+>    print ret
+
+-}
 forEachClient :: [Nodekey] -> (Client -> IO (Maybe a)) -> IO ([Maybe a])
 forEachClient clients act = do
   mapM (\c -> withClient c act) clients
 
 
--- Query Operations
+-------------------------------- Query Operations
 
+{- | Set an item
+-}
 set :: (MonadIO m, Key k, Serialize v) => Client -> k -> v -> m Bool
 set = set' SetOp
 
@@ -112,12 +141,18 @@ set' op client key0 value0 = do
     recv socket :: IO (Maybe Response)
   return (resp == Just Stored)
 
+{- | Add an item
+-}
 add :: (MonadIO m, Key k, Serialize v) => Client -> k -> v -> m Bool
 add = set' AddOp
 
+{- | Replace an item
+-}
 replace :: (MonadIO m, Key k, Serialize v) => Client -> k -> v -> m Bool
 replace = set' ReplaceOp
 
+{- | Get an item
+-}
 get :: (MonadIO m, Key k, Serialize v) => Client -> k -> m (Maybe v)
 get client key0 = do
   let socket = clientSocket client
@@ -125,17 +160,47 @@ get client key0 = do
       op = GetOp [key]
   resp <- liftIO $ do
     send socket op
-    recv socket :: IO (Maybe Response)
-  case resp of
-    Just (Value _ _ _ value _) -> do
-      end <- liftIO $ do
-        recv socket :: IO (Maybe Response)
-      case (end, decode value) of
-        (Just End, Right v) -> return (Just v)
-        (_, _) -> return (Nothing)
-    Just End -> return (Nothing)
-    _ -> return (Nothing)
+    values <- retrieve socket
+    case values of
+      ((Value _ _ _ value _):_) -> case decode value of
+        Right v -> return (Just v)
+        Left _ -> return (Nothing)
+      _ -> return (Nothing)
+  return (resp)
 
+retrieve :: Handle -> IO ([Response])
+retrieve h = do
+  ret <- retrieve'
+  return (reverse ret)
+  where
+    retrieve' = do
+      resp <- recv h :: IO (Maybe Response)
+      case resp of
+        Just value@(Value {}) -> do
+          values <- retrieve h
+          return (value:values)
+        Just End -> return ([])
+        _ -> return ([])
+
+{- | Get an item and its version
+-}
+gets :: (MonadIO m, Key k, Serialize v) => Client -> k -> m (Maybe (v, Word64))
+gets client key0 = do
+  let socket = clientSocket client
+      key = encode key0
+      op = GetsOp [key]
+  resp <- liftIO $ do
+    send socket op
+    values <- retrieve socket
+    case values of
+      ((Value _ _ _ value (Just version)):_) -> case decode value of
+        Right v -> return (Just (v, version))
+        Left _ -> return (Nothing)
+      _ -> return (Nothing)
+  return (resp)
+
+{- | Delete an item
+-}
 delete :: (MonadIO m, Key k) => Client -> k -> m Bool
 delete client key0 = do
   let socket = clientSocket client
@@ -145,6 +210,8 @@ delete client key0 = do
     recv socket :: IO (Maybe Response)
   return (resp == Just Deleted)
 
+{- | Increment an item
+-}
 incr :: (MonadIO m, Key k) => Client -> k -> Int -> m (Maybe Int)
 incr client key0 value = do
   let socket = clientSocket client
@@ -156,6 +223,8 @@ incr client key0 value = do
     Just (Code value') -> return (Just $ fromIntegral value')
     _ -> return (Nothing)
 
+{- | Decrement an item
+-}
 decr :: (MonadIO m, Key k) => Client -> k -> Int -> m (Maybe Int)
 decr client key0 value = do
   let socket = clientSocket client
@@ -169,6 +238,8 @@ decr client key0 value = do
 
 -- Other Operations
 
+{- | DEPLICATED
+-}
 ping :: (MonadIO m) => Client -> m (Maybe Response)
 ping client = do
   let socket = clientSocket client
@@ -178,6 +249,8 @@ ping client = do
     recv socket :: IO (Maybe Response)
   return (resp)
 
+{- | Flush all items
+-}
 flushAll :: (MonadIO m) => Client -> m (Maybe Response)
 flushAll client = do
   let socket = clientSocket client
@@ -187,9 +260,13 @@ flushAll client = do
     recv socket :: IO (Maybe Response)
   return (resp)
 
+{- | Acquire statistic information
+-}
 stats :: (MonadIO m) => Client -> m (StatsList)
 stats client = statsWithArgs client []
 
+{- | Acquire statistic information with arguments
+-}
 statsWithArgs :: (MonadIO m) => Client -> [String] -> m ([(String, String)])
 statsWithArgs client args = do
   let socket = clientSocket client

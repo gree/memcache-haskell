@@ -3,15 +3,23 @@
 
 -- authors: Kiyoshi Ikehara <kiyoshi.ikehara@gree.net>
 
--- see https://github.com/memcached/memcached/blob/master/doc/protocol.txt
---  storage - "set", "add", "replace", "append" or "prepend"
---  retrieval - "get" and "gets"
---  deletion - "delete"
---  increment decrement - "incr" and "decr"
---  touch - "touch"
---  stats
---  other commands - "flush_all", "version", "quit"
+{- |
+   For farther information, please see https://github.com/memcached/memcached/blob/master/doc/protocol.txt
 
+* storage - 'set', 'add', 'replace', 'append' or 'prepend'
+
+* retrieval - 'get' and 'gets'
+
+* deletion - 'delete'
+
+* increment decrement - 'incr' and 'decr'
+
+* touch - 'touch'
+
+* stats
+
+* other commands - 'flush_all', 'version', 'quit'
+-}
 module Network.Memcache.Op (
     Option(..)
   , Op(PingOp
@@ -231,14 +239,12 @@ isNoreplyOp op = case op of
 
 
 -- parse op header
-{-|
-  parse an operation
+{-| Parse an operation.
 -}
 parseOp :: BS.ByteString -> Maybe Op
 parseOp = parseOp' False
 
-{-|
-  parse an operation but only its header
+{-| Parse an operation but only its header.
 -}
 parseOpHeader :: BS.ByteString -> Maybe Op
 parseOpHeader = parseOp' True
@@ -319,7 +325,6 @@ opParser' onlyHeader = parser
       opts  <- options <* endline
       value <- if onlyHeader then pure BS.empty else (take (fromIntegral size) <* ws <* endline)
       return (op' size ver value opts)
-
 
 {-|
   convert a response to bytestring chunks
