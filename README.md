@@ -1,11 +1,13 @@
+
 memcache-conduit
 ================
 
-How to use
-----------
+Installation
+------------
 
-    > git clone ...
-    > cabal install memcached-haskell/ memcached-conduit/
+    > git clone https://github.com/gree/memcache-haskell.git
+    > git clone https://github.com/gree/memcache-conduit.git
+    > cabal install memcache-haskell/ memcache-conduit/
 
 Sample code
 -----------
@@ -15,18 +17,18 @@ Sample code
 hemcached is a simple memcached server to demonstrate how to use the memcache conduit functions.
 (expiration and eviction are not implemented.)
 
-Launch hemcached
+1) Launch hemcached
 
     > ~/.cabal/bin/hemcached
 
-Open another terminal window
+2) Open another terminal window
 
     > telnet localhost 11211
     Trying 127.0.0.1...
     Connected to localhost.
     Escape character is '^]'.
 
-Send memcache commands
+3) Send memcache commands
 
     set key 0 0 5
     value
@@ -35,4 +37,6 @@ Send memcache commands
     VALUE key 0 5
     value
     end
+
+If you want to know further information, please see the file "main/hemcached.hs" in this repository.
 

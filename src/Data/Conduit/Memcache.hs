@@ -2,7 +2,7 @@
 
 
 {- | This package provides conduit functions for memcache protocol.
-     For detail, please see 'hemcached' sample code.
+     For detail, please see 'hemcached' sample code (main/hemcached.hs).
 
 > type Key = BS.ByteString
 > type Version = Word64
