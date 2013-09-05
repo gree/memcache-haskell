@@ -1,9 +1,5 @@
-{-# LANGUAGE ExistentialQuantification #-}
 
-module Network.Memcache.Types (Key) where
+module Network.Memcache.Types where
 
-import Data.Hashable
-import Data.Serialize
 
-class (Hashable a, Serialize a) => Key a where
 

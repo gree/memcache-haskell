@@ -40,7 +40,7 @@ import Control.Monad.IO.Class
 import Data.Serialize hiding (get, put)
 import Data.Word
 
-import Network.Memcache.Types
+import Network.Memcache.Class
 import Network.Memcache.Op
 import Network.Memcache.Response
 import Network.Memcache.IO
@@ -135,7 +135,7 @@ set = set' SetOp
 set' :: (MonadIO m, Key k, Serialize v) => (BS.ByteString -> Word32 -> Word64 -> Word64 -> BS.ByteString -> [Option] -> Op) -> Client -> k -> v -> m Bool
 set' op client key0 value0 = do
   let socket = clientSocket client
-      key = encode key0
+      key = toBS key0
       value = encode value0
   resp <- liftIO $ do
     send socket $ op key 0 0 (fromIntegral $ BS.length value) value []
@@ -162,7 +162,7 @@ replace = set' ReplaceOp
 get :: (MonadIO m, Key k, Serialize v) => Client -> k -> m (Maybe v)
 get client key0 = do
   let socket = clientSocket client
-      key = encode key0
+      key = toBS key0
       op = GetOp [key]
   resp <- liftIO $ do
     send socket op
@@ -193,7 +193,7 @@ retrieve h = do
 gets :: (MonadIO m, Key k, Serialize v) => Client -> k -> m (Maybe (v, Word64))
 gets client key0 = do
   let socket = clientSocket client
-      key = encode key0
+      key = toBS key0
       op = GetsOp [key]
   resp <- liftIO $ do
     send socket op
@@ -210,7 +210,7 @@ gets client key0 = do
 delete :: (MonadIO m, Key k) => Client -> k -> m Bool
 delete client key0 = do
   let socket = clientSocket client
-      key = encode key0
+      key = toBS key0
   resp <- liftIO $ do
     send socket $ DeleteOp key []
     recv socket :: IO (Maybe Response)
@@ -221,7 +221,7 @@ delete client key0 = do
 incr :: (MonadIO m, Key k) => Client -> k -> Int -> m (Maybe Int)
 incr client key0 value = do
   let socket = clientSocket client
-      key = encode key0
+      key = toBS key0
   resp <- liftIO $ do
     send socket $ IncrOp key (fromIntegral value) []
     recv socket :: IO (Maybe Response)
@@ -234,7 +234,7 @@ incr client key0 value = do
 decr :: (MonadIO m, Key k) => Client -> k -> Int -> m (Maybe Int)
 decr client key0 value = do
   let socket = clientSocket client
-      key = encode key0
+      key = toBS key0
   resp <- liftIO $ do
     send socket $ DecrOp key (fromIntegral value) []
     recv socket :: IO (Maybe Response)
