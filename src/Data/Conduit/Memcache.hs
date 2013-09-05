@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 
-{- | This is a conduit library for memcache protocol.
+{- | This package provides conduit functions for memcache protocol.
+     For detail, please see 'hemcached' sample code.
 
 > type Key = BS.ByteString
 > type Version = Word64

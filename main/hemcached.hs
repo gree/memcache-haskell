@@ -27,7 +27,7 @@ main = do
   ht <- H.new :: IO (HashTable Key Value)
   htVar <- newMVar ht
   runResourceT $ do
-    runTCPServer (serverSettings 13301 HostAny) $ \appData -> do
+    runTCPServer (serverSettings 11211 HostAny) $ \appData -> do
       (appSource appData)
         $$ getOpText
         =$ process htVar

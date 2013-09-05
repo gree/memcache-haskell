@@ -1,12 +1,12 @@
 Name:           memcache-conduit
 Version:        0.0.2
-Description:    Memcached Protocol Conduit
 License:        OtherLicense
 Author:         Kiyoshi Ikehara
 Maintainer:     Kiyoshi Ikehara
 Copyright:      (c) 2013 GREE, Inc.
 Build-Type:     Simple
 Cabal-Version:  >=1.8
+Description:    This package provides conduit functions for memcache protocol.
 
 Library
   Ghc-Options:     -O2 -Wall
