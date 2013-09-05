@@ -9,14 +9,14 @@ import Data.Conduit
 import Data.Conduit.Network
 import Data.Conduit.Memcache
 import qualified Data.HashTable.IO as H
-import Network.Memcache.Class
-import Network.Memcache.Op
-import Network.Memcache.Response
 import Control.Monad
 import Control.Concurrent hiding (yield)
 import Data.Word
 import Control.Exception
 import Control.Monad.Trans.Resource
+
+import Network.Memcache.Op
+import Network.Memcache.Response
 
 type Key = BS.ByteString
 type Version = Word64

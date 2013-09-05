@@ -38,7 +38,7 @@ Executable hemcached
                  , hashtables
                  , conduit
                  , network-conduit
-                 , memcache-haskell >= 0.0.4
+                 , memcache-haskell >= 0.0.6
                  , memcache-conduit
   Hs-source-dirs:  main
   Main-is:         hemcached.hs
