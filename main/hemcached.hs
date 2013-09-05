@@ -3,6 +3,7 @@
 
 module Main where
 
+import Prelude hiding (lookup)
 import Control.Monad.Trans
 import qualified Data.ByteString.Char8 as BS
 import Data.Conduit
@@ -12,8 +13,6 @@ import qualified Data.HashTable.IO as H
 import Control.Monad
 import Control.Concurrent hiding (yield)
 import Data.Word
-import Control.Exception
-import Control.Monad.Trans.Resource
 
 import Network.Memcache.Op
 import Network.Memcache.Response
@@ -43,9 +42,9 @@ process htVar = loop
       meOp <- await
       case meOp of
         Nothing -> return ()
-        Just (Left msg) -> yield Error >> loop
+        Just (Left _msg) -> yield Error >> loop
         Just (Right op) -> case op of
-          SetOp key flags exptime bytes value options -> do
+          SetOp key _flags _exptime _bytes value options -> do
             with $ \ht -> do
               mValue <- lookup ht key
               case mValue of
@@ -53,7 +52,7 @@ process htVar = loop
                 Nothing -> insert ht key (0, value)
               yield' options Stored
             loop
-          CasOp key flags exptime bytes version value options -> do
+          CasOp key _flags _exptime _bytes version value options -> do
             with $ \ht -> do
               mValue <- lookup ht key
               case mValue of
@@ -64,7 +63,7 @@ process htVar = loop
                     yield' options Stored
                   False -> yield' options Exists
             loop
-          AddOp key flags exptime bytes value options -> do
+          AddOp key _flags _exptime _bytes value options -> do
             with $ \ht -> do
               mValue <- lookup ht key
               case mValue of
@@ -73,7 +72,7 @@ process htVar = loop
                   yield' options Stored
                 Just _ -> yield' options NotStored
             loop
-          ReplaceOp key flags exptime bytes value options -> do
+          ReplaceOp key _flags _exptime _bytes value options -> do
             with $ \ht -> do
               mValue <- lookup ht key
               case mValue of
@@ -93,12 +92,12 @@ process htVar = loop
             loop
           IncrOp key value options -> incr' True key value options >> loop
           DecrOp key value options -> incr' False key value options >> loop
-          TouchOp key exptime options -> do
+          TouchOp key _exptime options -> do
             with $ \ht -> do
               mValue <- lookup ht key
               case mValue of
                 Nothing -> yield' options NotFound
-                Just (_, value) -> yield' options Touched -- XXX
+                Just (_, _value) -> yield' options Touched -- XXX
             loop
           PingOp -> yield Ok >> loop
           FlushAllOp -> do
@@ -107,7 +106,7 @@ process htVar = loop
             loop
           VersionOp -> yield (Version "hemcached-0.0.1") >> loop
           QuitOp -> return ()
-          StatsOp args -> yield End >> loop
+          StatsOp _args -> yield End >> loop
 
     incr' isIncr key value options = do
       with $ \ht -> do
@@ -119,7 +118,7 @@ process htVar = loop
             insert ht key (version' + 1, BS.pack $ show r)
             yield' options $ Code r
 
-    append' isAppend key flags exptime bytes value options = do
+    append' isAppend key _flags _exptime _bytes value options = do
       with $ \ht -> do
         mValue <- lookup ht key
         case mValue of
