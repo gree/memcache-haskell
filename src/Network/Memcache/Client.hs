@@ -38,6 +38,7 @@ import qualified Data.ByteString.Char8 as BS
 import Control.Monad.IO.Class
 import Data.Word
 
+import Network.Memcache.Types
 import Network.Memcache.Class
 import Network.Memcache.Op
 import Network.Memcache.Response
@@ -49,9 +50,6 @@ data Client = MemcachedClient {
     clientNodekey :: String
   , clientSocket :: Handle
   }
-
-type StatsList = [(String, String)]
-type Nodekey = String
 
 {- | Open a client session and return a client handler.
 -}
