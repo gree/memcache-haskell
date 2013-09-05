@@ -24,7 +24,6 @@ module Network.Memcache.Client (
   , incr
   , decr
   -- Other Operations
-  , ping
   , flushAll
   , stats
   , statsWithArgs
@@ -242,17 +241,6 @@ decr client key0 value = do
     _ -> return (Nothing)
 
 -- Other Operations
-
-{- | DEPLICATED
--}
-ping :: (MonadIO m) => Client -> m (Maybe Response)
-ping client = do
-  let socket = clientSocket client
-      op = PingOp
-  liftIO $ send socket op
-  resp <- liftIO $ do
-    recv socket :: IO (Maybe Response)
-  return (resp)
 
 {- | Flush all items
 -}
