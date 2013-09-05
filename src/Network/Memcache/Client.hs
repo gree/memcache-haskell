@@ -15,6 +15,7 @@ module Network.Memcache.Client (
   , forEachClient
   -- Query Operations
   , set
+  , cas
   , add
   , replace
   , get
@@ -140,6 +141,11 @@ set' op client key0 value0 = do
     send socket $ op key 0 0 (fromIntegral $ BS.length value) value []
     recv socket :: IO (Maybe Response)
   return (resp == Just Stored)
+
+{- | Cas an item
+-}
+cas :: (MonadIO m, Key k, Serialize v) => Client -> k -> v -> Word64 -> m Bool
+cas client key value version = set' (\k f e b v o -> CasOp k f e b version v o) client key value
 
 {- | Add an item
 -}
