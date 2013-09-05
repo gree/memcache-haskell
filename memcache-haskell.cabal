@@ -1,5 +1,5 @@
 Name:           memcache-haskell
-Version:        0.0.5
+Version:        0.0.6
 Description:    Memcached
 License:        OtherLicense
 Author:         Kiyoshi Ikehara
