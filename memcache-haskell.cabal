@@ -16,7 +16,6 @@ Library
                  , attoparsec
                  , transformers
                  , split
-                 , cereal
                  , hashable     < 1.2
   Hs-source-dirs:  src
   Exposed-modules: Network.Memcache

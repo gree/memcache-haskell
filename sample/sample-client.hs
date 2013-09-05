@@ -22,6 +22,8 @@ main' nodekey = runResourceT $ do
       Nothing -> liftIO $ do
         throwIO (userError "could not open.")
   liftIO $ do
-    ret <- set client "key" "hoge"
+    ret <- set client "key" "foo"
     print ret
+    ret' <- get client "key" :: IO (Maybe String)
+    print ret'
   release rkeyClient

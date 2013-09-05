@@ -37,7 +37,6 @@ import Data.List.Split
 import Control.Exception
 import qualified Data.ByteString.Char8 as BS
 import Control.Monad.IO.Class
-import Data.Serialize hiding (get, put)
 import Data.Word
 
 import Network.Memcache.Class
@@ -129,14 +128,14 @@ forEachClient clients act = do
 
 {- | Set an item
 -}
-set :: (MonadIO m, Key k, Serialize v) => Client -> k -> v -> m Bool
+set :: (MonadIO m, Key k, Value v) => Client -> k -> v -> m Bool
 set = set' SetOp
 
-set' :: (MonadIO m, Key k, Serialize v) => (BS.ByteString -> Word32 -> Word64 -> Word64 -> BS.ByteString -> [Option] -> Op) -> Client -> k -> v -> m Bool
+set' :: (MonadIO m, Key k, Value v) => (BS.ByteString -> Word32 -> Word64 -> Word64 -> BS.ByteString -> [Option] -> Op) -> Client -> k -> v -> m Bool
 set' op client key0 value0 = do
   let socket = clientSocket client
       key = toBS key0
-      value = encode value0
+      value = serializeValue value0
   resp <- liftIO $ do
     send socket $ op key 0 0 (fromIntegral $ BS.length value) value []
     recv socket :: IO (Maybe Response)
@@ -144,22 +143,22 @@ set' op client key0 value0 = do
 
 {- | Cas an item
 -}
-cas :: (MonadIO m, Key k, Serialize v) => Client -> k -> v -> Word64 -> m Bool
+cas :: (MonadIO m, Key k, Value v) => Client -> k -> v -> Word64 -> m Bool
 cas client key value version = set' (\k f e b v o -> CasOp k f e b version v o) client key value
 
 {- | Add an item
 -}
-add :: (MonadIO m, Key k, Serialize v) => Client -> k -> v -> m Bool
+add :: (MonadIO m, Key k, Value v) => Client -> k -> v -> m Bool
 add = set' AddOp
 
 {- | Replace an item
 -}
-replace :: (MonadIO m, Key k, Serialize v) => Client -> k -> v -> m Bool
+replace :: (MonadIO m, Key k, Value v) => Client -> k -> v -> m Bool
 replace = set' ReplaceOp
 
 {- | Get an item
 -}
-get :: (MonadIO m, Key k, Serialize v) => Client -> k -> m (Maybe v)
+get :: (MonadIO m, Key k, Value v) => Client -> k -> m (Maybe v)
 get client key0 = do
   let socket = clientSocket client
       key = toBS key0
@@ -168,7 +167,7 @@ get client key0 = do
     send socket op
     values <- retrieve socket
     case values of
-      ((Value _ _ _ value _):_) -> case decode value of
+      ((Value _ _ _ value _):_) -> case deserializeValue value of
         Right v -> return (Just v)
         Left _ -> return (Nothing)
       _ -> return (Nothing)
@@ -190,7 +189,7 @@ retrieve h = do
 
 {- | Get an item and its version
 -}
-gets :: (MonadIO m, Key k, Serialize v) => Client -> k -> m (Maybe (v, Word64))
+gets :: (MonadIO m, Key k, Value v) => Client -> k -> m (Maybe (v, Word64))
 gets client key0 = do
   let socket = clientSocket client
       key = toBS key0
@@ -199,7 +198,7 @@ gets client key0 = do
     send socket op
     values <- retrieve socket
     case values of
-      ((Value _ _ _ value (Just version)):_) -> case decode value of
+      ((Value _ _ _ value (Just version)):_) -> case deserializeValue value of
         Right v -> return (Just (v, version))
         Left _ -> return (Nothing)
       _ -> return (Nothing)
