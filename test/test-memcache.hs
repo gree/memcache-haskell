@@ -18,7 +18,7 @@ import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
 import Test.QuickCheck.Arbitrary
 
-import Network.Memcache.Class
+import Network.Memcache.Class (toChunks)
 import Network.Memcache.Op
 import qualified Network.Memcache.Response as R
 
