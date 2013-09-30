@@ -5,6 +5,13 @@ Maintainer: Kiyoshi Ikehara <kiyoshi.ikehara@gree.net>
 
 memcache-haskell is a memcache protocol library for server and client application.
 
+If you want to implement a simple memcache client, please use functions in "Network.Memcache.Client" module.
+
+For server application, please use "Network.Memcache.Op" and "Network.Memcache.Response" to parse and process each command.
+
+If you are familiar with conduit library, please take a look at memcache-conduit library and you will
+find that you can write a server taking memcache protocol very quickly.
+
 > main :: IO ()
 > main = do
 >   runResourceT $ do
@@ -14,8 +21,6 @@ memcache-haskell is a memcache protocol library for server and client applicatio
 >         =$ process htVar
 >         =$ putResponseText
 >         =$ (appSink appData)
-
-For memcache server, please use "Network.Memcache.Op" and "Network.Memcache.Response" to parse and process each command.
 
 -}
 

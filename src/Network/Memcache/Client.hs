@@ -44,7 +44,7 @@ import Network.Memcache.Op
 import Network.Memcache.Response
 import Network.Memcache.IO
 
-{- | Client is a handler for a memcached session.
+{- | Client is a handler corresponding to a memcached session.
 -}
 data Client = MemcachedClient {
     clientNodekey :: String
@@ -58,27 +58,24 @@ openClient :: (MonadIO m)
               -> m (Maybe Client) -- ^ client handler
 openClient nodekey = case hostnameAndPort nodekey of
   Just (hostname, port) -> do
-    let portNumber = PortNumber (fromIntegral port)
-    socket <- liftIO $ connectTo hostname portNumber
+    socket <- liftIO $ connectTo hostname (PortNumber (fromIntegral port))
     return $ Just $ MemcachedClient nodekey socket
   Nothing -> return Nothing
 
 {- | Close a client session.
 -}
 closeClient :: (MonadIO m)
-               => Client -- ^ client handler
+               => Client -- ^ a client handler
                -> m ()
-closeClient client = do
-  let hSocket = clientSocket client
-  liftIO $ do
-    closeClient' `catch` (\(SomeException _e) -> return ())
+closeClient client = liftIO $ do
+    closeClient' `catch` ignoreException ()
     hClose hSocket
   where
+    hSocket = clientSocket client
+
     closeClient' = do
-      let hSocket = clientSocket client
       BS.hPutStr hSocket $ BS.pack "quit\r\n"
       hFlush hSocket
-      return ()
 
 {- | Connect and execute an action.
 -}
@@ -88,23 +85,29 @@ withClient nodekey = withClients [nodekey]
 {- | Connect to one of given hosts and execute an action.
 
 >  main = do
->    ret <- withClient ["127.0.0.1:11211"] $ \client -> get client "key"
+>    ret <- withClients ["127.0.0.1:11211"] $ \client -> get client "key"
 >    print ret
 
+Note that this function doesn't retry the action when it fails.
+
 -}
-withClients :: [Nodekey] -> (Client -> IO (Maybe a)) -> IO (Maybe a)
+withClients :: [Nodekey] -- ^ a node list
+               -> (Client -> IO (Maybe a)) -- ^ an action to be executed with a memcache session
+               -> IO (Maybe a)
 withClients nodekeys act = bracket (allocate nodekeys) release invoke
   where
     allocate :: [Nodekey] -> IO (Maybe Client)
     allocate [] = return Nothing
     allocate (n:ns) = do
-      r <- openClient n `catch` (\(SomeException _e) -> return Nothing)
+      r <- openClient n `catch` ignoreException Nothing
       case r of
         Nothing -> allocate ns
         client -> return client
+
     release client = case client of
       Just c -> closeClient c
       Nothing -> return ()
+
     invoke client = case client of
       Just c -> act c
       Nothing -> return Nothing
@@ -278,4 +281,7 @@ hostnameAndPort :: String -> Maybe (String, Int)
 hostnameAndPort nk = case Data.List.Split.splitOn ":" nk of
   (hostname:port:[]) -> Just (hostname, (read port :: Int))
   _ -> Nothing
+
+ignoreException :: a -> SomeException -> IO a
+ignoreException ret _e = return ret
 
