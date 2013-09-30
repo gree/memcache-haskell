@@ -79,7 +79,9 @@ closeClient client = liftIO $ do
 
 {- | Connect and execute an action.
 -}
-withClient :: Nodekey -> (Client -> IO (Maybe a)) -> IO (Maybe a)
+withClient :: Nodekey                     -- ^ a node
+              -> (Client -> IO (Maybe a)) -- ^ an action to be executed with a memcache session
+              -> IO (Maybe a)
 withClient nodekey = withClients [nodekey]
 
 {- | Connect to one of given hosts and execute an action.
@@ -91,7 +93,7 @@ withClient nodekey = withClients [nodekey]
 Note that this function doesn't retry the action when it fails.
 
 -}
-withClients :: [Nodekey] -- ^ a node list
+withClients :: [Nodekey]                   -- ^ a node list
                -> (Client -> IO (Maybe a)) -- ^ an action to be executed with a memcache session
                -> IO (Maybe a)
 withClients nodekeys act = bracket (allocate nodekeys) release invoke
@@ -119,7 +121,9 @@ withClients nodekeys act = bracket (allocate nodekeys) release invoke
 >    print ret
 
 -}
-forEachClient :: [Nodekey] -> (Client -> IO (Maybe a)) -> IO ([Maybe a])
+forEachClient :: [Nodekey]                   -- ^ a node list
+                 -> (Client -> IO (Maybe a)) -- ^ an action to be executed with a memcache session
+                 -> IO ([Maybe a])
 forEachClient clients act = do
   mapM (\c -> withClient c act) clients
 
@@ -128,9 +132,14 @@ forEachClient clients act = do
 
 {- | Set an item
 -}
-set :: (MonadIO m, Key k, Value v) => Client -> k -> v -> m Bool
+set :: (MonadIO m, Key k, Value v)
+       => Client -- ^ a client handler
+       -> k      -- ^ a key
+       -> v      -- ^ a value
+       -> m Bool
 set = set' SetOp
 
+-- a helper function
 set' :: (MonadIO m, Key k, Value v) => (BS.ByteString -> Word32 -> Word64 -> Word64 -> BS.ByteString -> [Option] -> Op) -> Client -> k -> v -> m Bool
 set' op client key0 value0 = do
   let socket = clientSocket client
@@ -143,22 +152,38 @@ set' op client key0 value0 = do
 
 {- | Cas an item
 -}
-cas :: (MonadIO m, Key k, Value v) => Client -> k -> v -> Word64 -> m Bool
+cas :: (MonadIO m, Key k, Value v)
+       => Client -- ^ a client handler
+       -> k      -- ^ a key
+       -> v      -- ^ a value
+       -> Word64 -- ^ a version number got by gets command
+       -> m Bool
 cas client key value version = set' (\k f e b v o -> CasOp k f e b version v o) client key value
 
 {- | Add an item
 -}
-add :: (MonadIO m, Key k, Value v) => Client -> k -> v -> m Bool
+add :: (MonadIO m, Key k, Value v)
+       => Client -- ^ a client handler
+       -> k      -- ^ a key
+       -> v      -- ^ a value
+       -> m Bool
 add = set' AddOp
 
 {- | Replace an item
 -}
-replace :: (MonadIO m, Key k, Value v) => Client -> k -> v -> m Bool
+replace :: (MonadIO m, Key k, Value v)
+           => Client -- ^ a client handler
+           -> k      -- ^ a key
+           -> v      -- ^ a value
+           -> m Bool
 replace = set' ReplaceOp
 
 {- | Get an item
 -}
-get :: (MonadIO m, Key k, Value v) => Client -> k -> m (Maybe v)
+get :: (MonadIO m, Key k, Value v)
+       => Client -- ^ a client handler
+       -> k      -- ^ a key
+       -> m (Maybe v)
 get client key0 = do
   let socket = clientSocket client
       key = toBS key0
@@ -173,6 +198,7 @@ get client key0 = do
       _ -> return (Nothing)
   return (resp)
 
+-- a helper function
 retrieve :: Handle -> IO ([Response])
 retrieve h = do
   ret <- retrieve'
@@ -189,7 +215,10 @@ retrieve h = do
 
 {- | Get an item and its version
 -}
-gets :: (MonadIO m, Key k, Value v) => Client -> k -> m (Maybe (v, Word64))
+gets :: (MonadIO m, Key k, Value v)
+        => Client                -- ^ a client handler
+        -> k                     -- ^ a key
+        -> m (Maybe (v, Word64)) -- ^ the value and version pair corresponding to the key
 gets client key0 = do
   let socket = clientSocket client
       key = toBS key0
@@ -206,7 +235,10 @@ gets client key0 = do
 
 {- | Delete an item
 -}
-delete :: (MonadIO m, Key k) => Client -> k -> m Bool
+delete :: (MonadIO m, Key k)
+          => Client -- ^ a client handler
+          -> k      -- ^ a key
+          -> m Bool -- ^ true if the item has been deleted
 delete client key0 = do
   let socket = clientSocket client
       key = toBS key0
@@ -217,7 +249,11 @@ delete client key0 = do
 
 {- | Increment an item
 -}
-incr :: (MonadIO m, Key k) => Client -> k -> Int -> m (Maybe Int)
+incr :: (MonadIO m, Key k)
+        => Client        -- ^ a client handler
+        -> k             -- ^ a key
+        -> Int           -- ^ delta
+        -> m (Maybe Int) -- ^ a resulted value
 incr client key0 value = do
   let socket = clientSocket client
       key = toBS key0
@@ -230,7 +266,11 @@ incr client key0 value = do
 
 {- | Decrement an item
 -}
-decr :: (MonadIO m, Key k) => Client -> k -> Int -> m (Maybe Int)
+decr :: (MonadIO m, Key k)
+        => Client        -- ^ a client handler
+        -> k             -- ^ a key
+        -> Int           -- ^ delta
+        -> m (Maybe Int) -- ^ a resulted value
 decr client key0 value = do
   let socket = clientSocket client
       key = toBS key0
@@ -245,7 +285,9 @@ decr client key0 value = do
 
 {- | Flush all items
 -}
-flushAll :: (MonadIO m) => Client -> m (Maybe Response)
+flushAll :: (MonadIO m)
+            => Client             -- ^ a client handler
+            -> m (Maybe Response) -- ^ OK if all items has been removed
 flushAll client = do
   let socket = clientSocket client
       op = FlushAllOp
@@ -255,13 +297,24 @@ flushAll client = do
   return (resp)
 
 {- | Acquire statistic information
+
+To get each statistic value from the resulted list, use "Network.Memcache.Stats" module.
+
 -}
-stats :: (MonadIO m) => Client -> m (StatsList)
+stats :: (MonadIO m)
+         => Client        -- ^ a client handler
+         -> m (StatsList) -- ^ a property list
 stats client = statsWithArgs client []
 
 {- | Acquire statistic information with arguments
+
+To get each statistic value from the resulted list, use "Network.Memcache.Stats" module.
+
 -}
-statsWithArgs :: (MonadIO m) => Client -> [String] -> m ([(String, String)])
+statsWithArgs :: (MonadIO m)
+                 => Client        -- ^ a client handler
+                 -> [String]      -- ^ arguments
+                 -> m (StatsList) -- ^ a property list
 statsWithArgs client args = do
   let socket = clientSocket client
   liftIO $ send socket $ StatsOp (map BS.pack args)

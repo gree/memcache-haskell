@@ -5,12 +5,21 @@ Maintainer: Kiyoshi Ikehara <kiyoshi.ikehara@gree.net>
 
 memcache-haskell is a memcache protocol library for server and client application.
 
-If you want to implement a simple memcache client, please use functions in "Network.Memcache.Client" module.
+If you want to implement a simple memcache client, just import "Network.Memcache" module.
+
+>  import Network.Memcache
+>  
+>  main = do
+>    mValue <- withClient "127.0.0.1:11211" $ \client -> get client "key"
+>    print mValue
+
+If your application is more complex and should recognize memcache command and response directly,
+you have to import more and use low-level functions.
 
 For server application, please use "Network.Memcache.Op" and "Network.Memcache.Response" to parse and process each command.
 
 If you are familiar with conduit library, please take a look at memcache-conduit library and you will
-find that you can write a server taking memcache protocol very quickly.
+find that you can write a server talking memcache protocol very quickly.
 
 > main :: IO ()
 > main = do
