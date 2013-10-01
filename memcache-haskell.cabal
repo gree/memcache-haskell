@@ -45,6 +45,23 @@ Executable memcache-sample-client
   Main-is:         sample-client.hs
   Extensions:      DeriveDataTypeable
 
+Executable memcache-sample-retrieval
+  Ghc-Options:     -threaded -O2 -Wall -rtsopts
+  Extra-Libraries: 
+  Build-Depends:   base       >= 4 && < 5
+                 , bytestring >= 0.9
+                 , stm        >= 2.4
+                 , containers
+                 , transformers
+                 , resourcet
+                 , mtl
+                 , hashtables
+                 , network-conduit
+                 , memcache-haskell
+  Hs-source-dirs:  sample
+  Main-is:         sample-retrieval.hs
+  Extensions:      DeriveDataTypeable
+
 Test-Suite test-memcache
   Ghc-Options:     -threaded -O2 -Wall
   Build-depends:   base

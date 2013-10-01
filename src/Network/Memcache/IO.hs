@@ -11,6 +11,9 @@ import Data.Word
 import Network.Memcache.Class
 
 {- | Send a message.
+
+> send socket FlushAllOp
+
 -}
 send :: (MonadIO m, Message a) => Handle -> a -> m ()
 send handle msg = liftIO $ do
@@ -19,6 +22,11 @@ send handle msg = liftIO $ do
   hFlush handle
 
 {- | Receive a message.
+
+You may need to specify the return type when you call this function like the code shown below.
+
+> mresp <- recv socket :: IO (Maybe Response)
+
 -}
 recv :: (MonadIO m, Message a) => Handle -> m (Maybe a)
 recv handle = liftIO $ do
@@ -29,7 +37,7 @@ recv handle = liftIO $ do
 
 {- | Read data from a handle
 -}
-readBytes :: Handle
+readBytes :: Handle    -- ^ a I/O handler
              -> Word64 -- ^ data length
              -> IO (BS.ByteString)
 readBytes handle len = BS.hGet handle (fromIntegral len)

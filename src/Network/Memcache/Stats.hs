@@ -1,4 +1,8 @@
 
+{-| Statistic information
+
+Please refer to <https://github.com/memcached/memcached/blob/master/doc/protocol.txt> for detail.
+-}
 module Network.Memcache.Stats (
     getValue
   , getPid

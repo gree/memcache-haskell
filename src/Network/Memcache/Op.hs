@@ -4,7 +4,7 @@
 -- authors: Kiyoshi Ikehara <kiyoshi.ikehara@gree.net>
 
 {- |
-   For farther information, please see https://github.com/memcached/memcached/blob/master/doc/protocol.txt
+   For farther information, please see <https://github.com/memcached/memcached/blob/master/doc/protocol.txt>
 
 * storage - 'set', 'add', 'replace', 'append' or 'prepend'
 
@@ -158,6 +158,7 @@ data Op =
   | StatsOp { args :: [BS.ByteString] }
  deriving (Show, Read, Eq)
 
+-- | parse option strings
 toOptions :: [BS.ByteString] -> Maybe [Option]
 toOptions opts = if elem Nothing converted
                  then Nothing
@@ -165,21 +166,25 @@ toOptions opts = if elem Nothing converted
   where
     converted = map toOption opts
 
+-- | parse a option string
 toOption :: BS.ByteString -> Maybe Option
 toOption option = case option of
   "noreply" -> Just Noreply
   _ -> Nothing
 
+-- | update the value of an operation
 updateOpValue :: Op -> ValueT -> Op
 updateOpValue op val
   | isStorageOp op = op { value = val }
   | otherwise = op
 
+-- | get the value size of an operation
 bytesOf :: Op -> Maybe BytesT
 bytesOf op
   | isStorageOp op = Just $ bytes op
   | otherwise = Nothing
 
+-- | get the key of an operation
 keyOf :: Op -> Maybe BS.ByteString
 keyOf op = case op of
   PingOp -> Nothing
@@ -193,6 +198,7 @@ keyOf op = case op of
   GetsOp (k:_) -> Just k
   _ -> Just $ key op
 
+-- | true if an operation is an update command
 isWriteOp :: Op -> Bool
 isWriteOp op = case op of
   SetOp {} -> True
@@ -207,6 +213,7 @@ isWriteOp op = case op of
   TouchOp {} -> True
   _ -> False
 
+-- | true if an operation is a storage command
 isStorageOp :: Op -> Bool
 isStorageOp op = case op of
   SetOp {} -> True
@@ -217,12 +224,14 @@ isStorageOp op = case op of
   PrependOp {} -> True
   _ -> False
 
+-- | true if an operation is a retrieval command
 isReadOp :: Op -> Bool
 isReadOp op = case op of
   GetOp {} -> True
   GetsOp {} -> True
   _ -> False
 
+-- | true if an operation has noreply option
 isNoreplyOp :: Op -> Bool
 isNoreplyOp op = case op of
   SetOp { options = os }     -> elem Noreply os
@@ -238,7 +247,6 @@ isNoreplyOp op = case op of
   _ -> False
 
 
--- parse op header
 {-| Parse an operation.
 -}
 parseOp :: BS.ByteString -> Maybe Op

@@ -86,9 +86,13 @@ withClient nodekey = withClients [nodekey]
 
 {- | Connect to one of given hosts and execute an action.
 
->  main = do
->    ret <- withClients ["127.0.0.1:11211"] $ \client -> get client "key"
->    print ret
+> import Network.Memcache
+>   
+> main = do
+>   mValue <- withClient "127.0.0.1:11211" $ \client -> get client "key"
+>   case mValue of
+>     Nothing -> putStrLn "(no value)"
+>     Just value -> putStrLn value
 
 Note that this function doesn't retry the action when it fails.
 
@@ -115,6 +119,8 @@ withClients nodekeys act = bracket (allocate nodekeys) release invoke
       Nothing -> return Nothing
 
 {- | Connect to the given hosts one by one and execute the action for each client.
+
+If you'd like to clear all the data in your cluster, you can use this function to issue \"flush_all\" command to each memcache node.
 
 >  main = do
 >    ret <- forEachClient ["192.168.0.1:11211", "192.168.0.2:11211"] $ flushAll
