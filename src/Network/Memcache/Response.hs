@@ -41,7 +41,7 @@ import Control.Monad.IO.Class
 -- import Debug.Trace
 
 import Network.Memcache.Class
-import Network.Memcache.IO
+import Network.Memcache.IO.Internal
 
 instance Message Response where
   parseHeader = parseResponseHeader

@@ -65,8 +65,6 @@ find that you can write a memcache protocol server very quickly.
 >
 > process = ...
 
-
-
 -}
 
 module Network.Memcache (

@@ -63,10 +63,8 @@ import Data.Attoparsec.ByteString.Char8
 import Control.Applicative
 import Control.Monad.IO.Class
 
--- import Debug.Trace
-
 import Network.Memcache.Class
-import Network.Memcache.IO
+import Network.Memcache.IO.Internal
 
 type ValueT = BS.ByteString
 type BytesT = Word64
@@ -266,9 +264,13 @@ parseOp' onlyHeader input = let r = parse (opParser' onlyHeader) input in case r
     Partial {} -> Nothing
   Done _ result -> Just result
 
+{-| command parser by attoparsec
+-}
 opParser :: Parser Op
 opParser = opParser' False
 
+{-| command header parser by attoparsec
+-}
 opHeaderParser :: Parser Op
 opHeaderParser = opParser' True
 

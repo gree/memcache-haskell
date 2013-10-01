@@ -1,16 +1,15 @@
 
 {- | This is a utility module for handle-based IO opearations
 -}
-module Network.Memcache.IO (send, recv, readBytes) where
+module Network.Memcache.IO (send, recv) where
 
 import Control.Monad.IO.Class
 import System.IO
 import qualified Data.ByteString.Char8 as BS
-import Data.Word
 
 import Network.Memcache.Class
 
-{- | Send a message.
+{- | Send a message
 
 > send socket FlushAllOp
 
@@ -21,7 +20,7 @@ send handle msg = liftIO $ do
   BS.hPutStr handle $ BS.concat (toChunks msg)
   hFlush handle
 
-{- | Receive a message.
+{- | Receive a message
 
 You may need to specify the return type when you call this function like the code shown below.
 
@@ -34,11 +33,4 @@ recv handle = liftIO $ do
   case parseHeader l of
     Just msg -> recvContent handle msg
     Nothing -> return Nothing
-
-{- | Read data from a handle
--}
-readBytes :: Handle    -- ^ a I/O handler
-             -> Word64 -- ^ data length
-             -> IO (BS.ByteString)
-readBytes handle len = BS.hGet handle (fromIntegral len)
 
