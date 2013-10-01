@@ -1,10 +1,14 @@
 
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+
 {- | This is a utility module for client application.
 -}
 module Network.Memcache.Client (
     Client
   , StatsList
   , Nodekey
+  , Key
+  , Value
   , openClient
   , closeClient
   , clientNodekey
@@ -37,9 +41,9 @@ import Control.Exception
 import qualified Data.ByteString.Char8 as BS
 import Control.Monad.IO.Class
 import Data.Word
+import Data.Hashable
 
 import Network.Memcache.Types
-import Network.Memcache.Class
 import Network.Memcache.Op
 import Network.Memcache.Response
 import Network.Memcache.IO
@@ -50,6 +54,31 @@ data Client = MemcachedClient {
     clientNodekey :: String
   , clientSocket :: Handle
   }
+
+{- | Key class
+-}
+class (Hashable a) => Key a where
+  toBS :: a -> BS.ByteString
+
+instance Key String where
+  toBS = BS.pack
+
+instance Key BS.ByteString where
+  toBS k = k
+
+{- | Value class
+-}
+class Value a where
+  serializeValue :: a -> BS.ByteString
+  deserializeValue :: BS.ByteString -> Either String a
+
+instance Value String where
+  serializeValue = BS.pack
+  deserializeValue v = Right (BS.unpack v)
+
+instance Value BS.ByteString where
+  serializeValue v = v
+  deserializeValue v = Right v
 
 {- | Open a client session and return a client handler.
 -}

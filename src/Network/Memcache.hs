@@ -73,7 +73,7 @@ module Network.Memcache (
   , module Network.Memcache.Class
   ) where
 
-import Network.Memcache.Class (Key, Value, Message)
+import Network.Memcache.Class
 import Network.Memcache.Client
 import Network.Memcache.Stats
 
