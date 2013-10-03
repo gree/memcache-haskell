@@ -41,7 +41,7 @@ import Network.Memcache.Class
 import Network.Memcache.Op
 import Network.Memcache.Response
 
-{- | This conduit parses command messages of memcache's text protocol and generates "Network.Memcache.Op".
+{- | This conduit parses command messages in text protocol and generates "Network.Memcache.Op".
 
   [@input@] "Data.ByteString.Char8.ByteString"
 
@@ -55,7 +55,7 @@ getOpText = conduitParser opParser' =$= removePR
     opParser' = try (Right <$> opParser)
                 <|> (Left <$> (AB.takeWhile (\c -> c /= 10 && c /= 13) <* endline))
 
-{- | This conduit parses response messages of memcache's text protocol and generates "Network.Memcache.Response".
+{- | This conduit parses response messages in text protocol and generates "Network.Memcache.Response".
 
   [@input@] "Data.ByteString.Char8.ByteString"
 
@@ -69,7 +69,7 @@ getResponseText = conduitParser responseParser' =$= removePR
     responseParser' = try (Right <$> responseParser)
                       <|> (Left <$> (AB.takeWhile (\c -> c /= 10 && c /= 13) <* endline))
 
-{- | This generates command messages of memcache's text protocol from "Network.Memcache.Op"
+{- | This conduit generates command messages in text protocol from "Network.Memcache.Op" stream
 
   [@input@] "Network.Memcache.Op"
 
@@ -81,7 +81,7 @@ putOpText = loop
   where
     loop = await >>= maybe (return ()) (\op -> (yield $ BS.concat $ toChunks op) >> loop)
 
-{- | This generates response messages of memcache's text protocol from "Network.Memcache.Response"
+{- | This generates response messages in text protocol from "Network.Memcache.Response" stream
 
   [@input@] "Network.Memcache.Response"
 

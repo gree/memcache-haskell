@@ -19,7 +19,7 @@ Library
                  , attoparsec
                  , attoparsec-binary
                  , attoparsec-conduit
-                 , memcache-haskell   >= 0.0.2
+                 , memcache-haskell   >= 0.0.6
   Hs-source-dirs:  src
   Exposed-modules: Data.Conduit.Memcache
   Extensions:      DeriveDataTypeable
