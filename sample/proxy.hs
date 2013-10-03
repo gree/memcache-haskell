@@ -1,8 +1,9 @@
+-- Copyright (c) 2013, GREE, Inc. All rights reserved.
+-- authors: Kiyoshi Ikehara <kiyoshi.ikehara@gree.net>
 
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
-
 
 module Main where
 

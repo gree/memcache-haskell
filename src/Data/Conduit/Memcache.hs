@@ -1,5 +1,7 @@
-{-# LANGUAGE OverloadedStrings #-}
+-- Copyright (c) 2013, GREE, Inc. All rights reserved.
+-- authors: Kiyoshi Ikehara <kiyoshi.ikehara@gree.net>
 
+{-# LANGUAGE OverloadedStrings #-}
 
 {- | This package provides conduit functions for memcache protocol.
      For detail, please see 'hemcached' sample code (sample/hemcached.hs).
