@@ -1,6 +1,8 @@
 
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
+
 
 module Main where
 
@@ -26,6 +28,7 @@ data ProgramOptions = ProgramOptions {
   , optListenPort :: Int
   } deriving (Show)
 
+defaultOptions :: ProgramOptions
 defaultOptions = ProgramOptions {
     optHost       = "127.0.0.1"
   , optPort       = 12121
@@ -49,7 +52,7 @@ memcachedProxyOpts argv =
 main :: IO ()
 main = do
   args0 <- getArgs
-  (opts, args) <- memcachedProxyOpts args0
+  (opts, _args) <- memcachedProxyOpts args0
   setNumCapabilities 4
   let sSettings0 = (serverSettings (optListenPort opts) HostAny) :: ServerSettings IO
       sSettings = sSettings0  { serverAfterBind = (\s -> setSocketOption s NoDelay 1) }
@@ -72,11 +75,11 @@ proxyLoop' serverSource serverSink clientSource clientSink = do
   (serverSource', mop) <- serverSource $$++ await
   case mop of
     Nothing -> return ()
-    Just (Left msg) -> do
+    Just (Left _msg) -> do
       yield Error $$ (putResponseText =$ serverSink)
       proxyLoop' serverSource' serverSink clientSource clientSink
     Just (Right op) -> case op of
-      GetOp keys -> do
+      GetOp {} -> do
         yield op $$ (putOpText =$ clientSink)
         clientSource' <- proxyGet clientSource
         proxyLoop' serverSource' serverSink clientSource' clientSink
@@ -85,24 +88,30 @@ proxyLoop' serverSource serverSink clientSource clientSink = do
         (clientSource', mresp) <- clientSource $$++ await
         case mresp of
           Nothing -> return ()
+          Just (Left _msg) -> do
+            yield Error $$ (putResponseText =$ serverSink)
+            return ()
           Just (Right resp) -> do
             yield resp $$ (putResponseText =$ serverSink)
             proxyLoop' serverSource' serverSink clientSource' clientSink
   where
-    proxyGet clientSource = do
-      (clientSource', mresp) <- clientSource $$++ await
+    proxyGet source = do
+      (source', mresp) <- source $$++ await
       case mresp of
-        Nothing -> return (clientSource')
+        Nothing -> return (source')
+        Just (Left _msg) -> do
+          yield Error $$ (putResponseText =$ serverSink)
+          return (source')
         Just (Right resp) -> case resp of
           Value {} -> do
             yield resp $$ (putResponseText =$ serverSink)
-            proxyGet clientSource'
+            proxyGet source'
           End -> do
             yield End $$ (putResponseText =$ serverSink)
-            return (clientSource')
-          _ -> do -- XXX
-            yield resp $$ (putResponseText =$ serverSink)
-            proxyGet clientSource'
+            return (source')
+          _ -> do
+            yield Error $$ (putResponseText =$ serverSink)
+            return (source')
 
 runTCPClient :: (MonadIO m, MonadBaseControl IO m) => ClientSettings m -> Application m -> m ()
 runTCPClient settings app = control $ \run -> bracket

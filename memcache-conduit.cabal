@@ -40,7 +40,7 @@ Executable hemcached
                  , network-conduit
                  , memcache-haskell >= 0.0.6
                  , memcache-conduit
-  Hs-source-dirs:  main
+  Hs-source-dirs:  sample
   Main-is:         hemcached.hs
   Extensions:      DeriveDataTypeable
 
@@ -59,7 +59,7 @@ Executable henchmark
                  , network-conduit
                  , memcache-haskell
                  , memcache-conduit
-  Hs-source-dirs:  main
+  Hs-source-dirs:  sample
   Main-is:         henchmark.hs
   Extensions:      DeriveDataTypeable
 
@@ -79,6 +79,6 @@ Executable memcached-proxy
                  , network-conduit
                  , memcache-haskell
                  , memcache-conduit
-  Hs-source-dirs:  main
+  Hs-source-dirs:  sample
   Main-is:         memcached-proxy.hs
   Extensions:      DeriveDataTypeable

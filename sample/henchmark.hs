@@ -10,9 +10,10 @@ import Data.Conduit.Network
 import Data.Conduit.Memcache
 import Network.Memcache.Op
 import Network.Memcache.Response
-import Control.Concurrent hiding (yield)
+-- import Control.Concurrent hiding (yield)
 
 
+main :: IO ()
 main = do
   runTCPClient (clientSettings 13302 "127.0.0.1") $ \appData -> do
     (appSource appData)
@@ -22,7 +23,7 @@ main = do
       =$ (appSink appData)
 
 process :: (MonadIO m) => ConduitM (Either BS.ByteString Response) Op m ()
-process = loop 0
+process = loop (0 :: Int)
   where
     loop c = do
       if c < 1000000
