@@ -1,7 +1,8 @@
+-- Copyright (c) 2013, GREE, Inc. All rights reserved.
+-- authors: Kiyoshi Ikehara <kiyoshi.ikehara@gree.net>
+
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-name-shadowing #-}
-
--- authors: Kiyoshi Ikehara <kiyoshi.ikehara@gree.net>
 
 {- |
    For farther information, please see <https://github.com/memcached/memcached/blob/master/doc/protocol.txt>

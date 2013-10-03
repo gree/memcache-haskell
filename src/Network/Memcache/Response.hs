@@ -1,3 +1,4 @@
+-- Copyright (c) 2013, GREE, Inc. All rights reserved.
 -- authors: Kiyoshi Ikehara <kiyoshi.ikehara@gree.net>
 
 {-# LANGUAGE OverloadedStrings #-}

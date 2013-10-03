@@ -1,3 +1,5 @@
+-- Copyright (c) 2013, GREE, Inc. All rights reserved.
+-- authors: Kiyoshi Ikehara <kiyoshi.ikehara@gree.net>
 
 {- | This is a utility module for handle-based IO opearations
 -}

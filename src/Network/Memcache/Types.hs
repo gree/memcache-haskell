@@ -1,4 +1,7 @@
+-- Copyright (c) 2013, GREE, Inc. All rights reserved.
+-- authors: Kiyoshi Ikehara <kiyoshi.ikehara@gree.net>
 
+-- | Types
 module Network.Memcache.Types where
 
 -- | statistic property list

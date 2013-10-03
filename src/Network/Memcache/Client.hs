@@ -1,3 +1,5 @@
+-- Copyright (c) 2013, GREE, Inc. All rights reserved.
+-- authors: Kiyoshi Ikehara <kiyoshi.ikehara@gree.net>
 
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
@@ -51,7 +53,9 @@ import Network.Memcache.IO
 {- | Client is a handler corresponding to a memcached session.
 -}
 data Client = MemcachedClient {
+    -- | Get the hostname and port pair from a handler
     clientNodekey :: String
+    -- | Get the socket from a handler
   , clientSocket :: Handle
   }
 
@@ -110,7 +114,7 @@ closeClient client = liftIO $ do
 -}
 withClient :: Nodekey                     -- ^ a node
               -> (Client -> IO (Maybe a)) -- ^ an action to be executed with a memcache session
-              -> IO (Maybe a)
+              -> IO (Maybe a)             -- ^ the result of the given action
 withClient nodekey = withClients [nodekey]
 
 {- | Connect to one of given hosts and execute an action.
@@ -128,7 +132,7 @@ Note that this function doesn't retry the action when it fails.
 -}
 withClients :: [Nodekey]                   -- ^ a node list
                -> (Client -> IO (Maybe a)) -- ^ an action to be executed with a memcache session
-               -> IO (Maybe a)
+               -> IO (Maybe a)             -- ^ the result of the given action
 withClients nodekeys act = bracket (allocate nodekeys) release invoke
   where
     allocate :: [Nodekey] -> IO (Maybe Client)
@@ -158,7 +162,7 @@ If you'd like to clear all the data in your cluster, you can use this function t
 -}
 forEachClient :: [Nodekey]                   -- ^ a node list
                  -> (Client -> IO (Maybe a)) -- ^ an action to be executed with a memcache session
-                 -> IO ([Maybe a])
+                 -> IO ([Maybe a])           -- ^ the result of the given action
 forEachClient clients act = do
   mapM (\c -> withClient c act) clients
 
@@ -171,7 +175,7 @@ set :: (MonadIO m, Key k, Value v)
        => Client -- ^ a client handler
        -> k      -- ^ a key
        -> v      -- ^ a value
-       -> m Bool
+       -> m Bool -- ^ true if the value has been stored
 set = set' SetOp
 
 -- a helper function
@@ -192,7 +196,7 @@ cas :: (MonadIO m, Key k, Value v)
        -> k      -- ^ a key
        -> v      -- ^ a value
        -> Word64 -- ^ a version number got by gets command
-       -> m Bool
+       -> m Bool -- ^ true if the value has been stored
 cas client key value version = set' (\k f e b v o -> CasOp k f e b version v o) client key value
 
 {- | Add an item
@@ -210,15 +214,15 @@ replace :: (MonadIO m, Key k, Value v)
            => Client -- ^ a client handler
            -> k      -- ^ a key
            -> v      -- ^ a value
-           -> m Bool
+           -> m Bool -- ^ true if the value has been stored
 replace = set' ReplaceOp
 
 {- | Get an item
 -}
 get :: (MonadIO m, Key k, Value v)
-       => Client -- ^ a client handler
-       -> k      -- ^ a key
-       -> m (Maybe v)
+       => Client       -- ^ a client handler
+       -> k            -- ^ a key
+       -> m (Maybe v)  -- ^ the value corresponding to the given key
 get client key0 = do
   let socket = clientSocket client
       key = toBS key0
