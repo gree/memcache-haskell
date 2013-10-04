@@ -85,17 +85,18 @@ data Response =
   deriving (Show, Eq)
 
 {-|
-  response parser by attoparsec
+  Response parser by attoparsec.
 -}
 responseParser :: Parser Response
 responseParser = responseParser' False
 
 {-|
-  response header parser by attoparsec
+  Response header parser by attoparsec.
 -}
 responseHeaderParser :: Parser Response
 responseHeaderParser = responseParser' True
 
+-- make a parser depending on onlyHeadler switch
 responseParser' :: Bool -> Parser Response
 responseParser' onlyHeader = try parser <|> codeParser
   where
@@ -145,17 +146,18 @@ responseParser' onlyHeader = try parser <|> codeParser
     endline = try (string "\r\n") <|> string "\n" <|> string "\r"
 
 {-|
-  parse a response
+  Parse a response.
 -}
 parseResponse :: BS.ByteString -> Maybe Response
 parseResponse = parseResponse' False
 
 {-|
-  parse a response but only its header
+  Parse a response but only its header.
 -}
 parseResponseHeader :: BS.ByteString -> Maybe Response
 parseResponseHeader = parseResponse' True
 
+-- parse one response
 parseResponse' :: Bool -> BS.ByteString -> Maybe Response
 parseResponse' onlyHeader input = let r = parse (responseParser' onlyHeader) input in case r of
   Fail {} -> Nothing
@@ -166,7 +168,7 @@ parseResponse' onlyHeader input = let r = parse (responseParser' onlyHeader) inp
   Done _ result -> Just result
 
 {-|
-  convert a response to bytestring chunks
+  Convert a response to bytestring chunks.
 -}
 toChunks :: Response -> [BS.ByteString]
 toChunks result = case result of

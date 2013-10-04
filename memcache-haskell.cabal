@@ -1,5 +1,5 @@
 Name:           memcache-haskell
-Version:        0.0.8
+Version:        0.0.9
 Description:    Memcache procotol library
 License:        OtherLicense
 Author:         Kiyoshi Ikehara
