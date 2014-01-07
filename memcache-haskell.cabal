@@ -10,6 +10,10 @@ Cabal-Version:  >=1.8
 Description:
     A memcache protocol library for client and server applications.
 
+Flag sample
+  Description: Build sample programs
+  Default: False
+
 Library
   Ghc-Options:     -O2 -Wall
   Build-Depends:   base         >=4 && <5
@@ -32,6 +36,10 @@ Library
   Extensions:      DeriveDataTypeable
 
 Executable memcache-sample-client
+  if flag(sample)
+    Buildable: True
+  else
+    Buildable: False
   Ghc-Options:     -threaded -O2 -Wall -rtsopts
   Extra-Libraries: 
   Build-Depends:   base       >= 4 && < 5
@@ -49,6 +57,10 @@ Executable memcache-sample-client
   Extensions:      DeriveDataTypeable
 
 Executable memcache-sample-retrieval
+  if flag(sample)
+    Buildable: True
+  else
+    Buildable: False
   Ghc-Options:     -threaded -O2 -Wall -rtsopts
   Extra-Libraries: 
   Build-Depends:   base       >= 4 && < 5
