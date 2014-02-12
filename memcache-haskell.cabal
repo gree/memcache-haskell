@@ -22,7 +22,7 @@ Library
                  , attoparsec
                  , transformers
                  , split
-                 , hashable     < 1.2
+                 , hashable
   Hs-source-dirs:  src
   Exposed-modules: Network.Memcache
                  , Network.Memcache.Response
