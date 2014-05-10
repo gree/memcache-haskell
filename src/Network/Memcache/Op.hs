@@ -96,65 +96,65 @@ instance Message Op where
 data Op = 
   -- storage commands
     SetOp {
-      key     :: BS.ByteString
-    , flags   :: Word32
-    , exptime :: Word64
-    , bytes   :: BytesT
+      key     :: !BS.ByteString
+    , flags   :: !Word32
+    , exptime :: !Word64
+    , bytes   :: !BytesT
     , value   :: ValueT
-    , options :: [Option] }
+    , options :: ![Option] }
   | CasOp {
-      key     :: BS.ByteString
-    , flags   :: Word32
-    , exptime :: Word64
-    , bytes   :: BytesT
-    , version :: Word64
+      key     :: !BS.ByteString
+    , flags   :: !Word32
+    , exptime :: !Word64
+    , bytes   :: !BytesT
+    , version :: !Word64
     , value   :: ValueT
-    , options :: [Option] }
+    , options :: ![Option] }
   | AddOp {
-      key     :: BS.ByteString
-    , flags   :: Word32
-    , exptime :: Word64
-    , bytes   :: BytesT
+      key     :: !BS.ByteString
+    , flags   :: !Word32
+    , exptime :: !Word64
+    , bytes   :: !BytesT
     , value   :: ValueT
-    , options :: [Option] }
+    , options :: ![Option] }
   | ReplaceOp {
-      key     :: BS.ByteString
-    , flags   :: Word32
-    , exptime :: Word64
-    , bytes   :: BytesT
+      key     :: !BS.ByteString
+    , flags   :: !Word32
+    , exptime :: !Word64
+    , bytes   :: !BytesT
     , value   :: ValueT
-    , options :: [Option] }
+    , options :: ![Option] }
   | AppendOp {
-      key     :: BS.ByteString
-    , flags   :: Word32
-    , exptime :: Word64
-    , bytes   :: BytesT
+      key     :: !BS.ByteString
+    , flags   :: !Word32
+    , exptime :: !Word64
+    , bytes   :: !BytesT
     , value   :: ValueT
-    , options :: [Option] }
+    , options :: ![Option] }
   | PrependOp {
-      key     :: BS.ByteString
-    , flags   :: Word32
-    , exptime :: Word64
-    , bytes   :: BytesT
+      key     :: !BS.ByteString
+    , flags   :: !Word32
+    , exptime :: !Word64
+    , bytes   :: !BytesT
     , value   :: ValueT
-    , options :: [Option] }
+    , options :: ![Option] }
   -- retrieval commands
-  | GetOp { keys :: [BS.ByteString] }
-  | GetsOp { keys :: [BS.ByteString] }
+  | GetOp { keys :: ![BS.ByteString] }
+  | GetsOp { keys :: ![BS.ByteString] }
   -- deletion commands
-  | DeleteOp { key :: BS.ByteString, options :: [Option] }
+  | DeleteOp { key :: !BS.ByteString, options :: ![Option] }
   -- increment and decrement commands
-  | IncrOp { key :: BS.ByteString, value' :: Word64, options :: [Option] }
-  | DecrOp { key :: BS.ByteString, value' :: Word64, options :: [Option] }
+  | IncrOp { key :: !BS.ByteString, value' :: !Word64, options :: ![Option] }
+  | DecrOp { key :: !BS.ByteString, value' :: !Word64, options :: ![Option] }
   -- touch commands
-  | TouchOp { key :: BS.ByteString, exptime :: Word64, options :: [Option] }
+  | TouchOp { key :: !BS.ByteString, exptime :: !Word64, options :: ![Option] }
   -- stats commands
   -- other commands
   | PingOp
   | FlushAllOp
   | VersionOp
   | QuitOp
-  | StatsOp { args :: [BS.ByteString] }
+  | StatsOp { args :: ![BS.ByteString] }
  deriving (Show, Read, Eq)
 
 -- | parse option strings

@@ -62,11 +62,11 @@ instance Message Response where
 data Response =
     Ok
   | Value {
-      _resKey     :: BS.ByteString
-    , _resFlag    :: Word32
-    , _resLen     :: Word64
+      _resKey     :: !BS.ByteString
+    , _resFlag    :: !Word32
+    , _resLen     :: !Word64
     , _resValue   :: BS.ByteString
-    , _resVersion :: Maybe Word64
+    , _resVersion :: !(Maybe Word64)
     }
   | End
   | Stored
@@ -174,10 +174,10 @@ toChunks :: Response -> [BS.ByteString]
 toChunks result = case result of
   Ok        -> ["OK\r\n"]
   Value key flag len value version ->
-    let header = BS.intercalate " " ["VALUE", key, show' flag, show' len] in
-      case version of
-      Nothing -> [header, "\r\n", value, "\r\n"]
-      Just version' -> [header, " ", show' version', "\r\n", value, "\r\n"]
+    let vh = maybe [] (\v -> [sp, show' v]) version
+        sp = " "
+        header = BS.concat $ ["VALUE", sp, key, sp, show' flag, sp, show' len] ++ vh ++ ["\r\n"]
+    in [header, value, "\r\n"]
   End       -> ["END\r\n"]
   Stored    -> ["STORED\r\n"]
   NotStored -> ["NOT_STORED\r\n"]
