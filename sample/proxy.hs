@@ -7,12 +7,9 @@
 
 module Main where
 
-import Control.Exception
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Control
 import Data.Conduit
-import Data.Conduit.Network hiding (runTCPClient)
-import Data.Conduit.Network.Internal
+import Data.Conduit.Network
 import Data.Conduit.Memcache
 import Network.Socket
 import qualified Data.ByteString.Char8 as BS
@@ -55,12 +52,13 @@ main = do
   args0 <- getArgs
   (opts, _args) <- memcachedProxyOpts args0
   setNumCapabilities 4
-  let sSettings0 = (serverSettings (optListenPort opts) HostAny) :: ServerSettings IO
-      sSettings = sSettings0  { serverAfterBind = (\s -> setSocketOption s NoDelay 1) }
+  let sSettings0 = (serverSettings (optListenPort opts) "*") :: ServerSettings
+      sSettings = setAfterBind (\s -> setSocketOption s NoDelay 1) sSettings0
   runTCPServer sSettings $ \appData -> do
-    runTCPClient (clientSettings (optPort opts) (BS.pack $ optHost opts)) (proxyLoop appData)
+    let cSettings = clientSettings (optPort opts) (BS.pack $ optHost opts)
+    runTCPClient cSettings (proxyLoop appData)
     
-proxyLoop :: AppData IO -> AppData IO -> IO ()
+proxyLoop :: AppData -> AppData -> IO ()
 proxyLoop serverData clientData = do
   (serverSource, ()) <- (appSource serverData $= getOpText) $$+ return ()
   (clientSource, ()) <- (appSource clientData $= getResponseText) $$+ return ()
@@ -113,15 +111,3 @@ proxyLoop' serverSource serverSink clientSource clientSink = do
           _ -> do
             yield Error $$ (putResponseText =$ serverSink)
             return (source')
-
-runTCPClient :: (MonadIO m, MonadBaseControl IO m) => ClientSettings m -> Application m -> m ()
-runTCPClient settings app = control $ \run -> bracket
-    (getSocket (clientHost settings) (clientPort settings))
-    (sClose . fst)
-    (\(s, address) -> do
-        setSocketOption s NoDelay 1
-        run $ app AppData { appSource = sourceSocket s
-                          , appSink = sinkSocket s
-                          , appSockAddr = address
-                          , appLocalAddr = Nothing
-                          })

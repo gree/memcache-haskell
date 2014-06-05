@@ -32,6 +32,7 @@ module Data.Conduit.Memcache (getOpText, getResponseText, putOpText, putResponse
 
 import Prelude hiding (takeWhile)
 import Control.Monad.Trans
+import Control.Monad.Trans.Resource
 import Control.Applicative
 import qualified Data.Attoparsec.ByteString as AB
 import Data.Attoparsec.ByteString.Char8

@@ -16,9 +16,10 @@ Library
                  , split
                  , mtl
                  , conduit
+                 , resourcet
+                 , conduit-extra
                  , attoparsec
                  , attoparsec-binary
-                 , attoparsec-conduit
                  , memcache-haskell   >= 0.0.6
   Hs-source-dirs:  src
   Exposed-modules: Data.Conduit.Memcache
@@ -37,7 +38,7 @@ Executable memcache-sample-hemcached
                  , mtl
                  , hashtables
                  , conduit
-                 , network-conduit
+                 , conduit-extra
                  , memcache-haskell >= 0.0.6
                  , memcache-conduit
   Hs-source-dirs:  sample
@@ -56,8 +57,8 @@ Executable memcache-sample-proxy
                  , mtl
                  , network
                  , conduit
+                 , conduit-extra
                  , monad-control
-                 , network-conduit
                  , memcache-haskell
                  , memcache-conduit
   Hs-source-dirs:  sample

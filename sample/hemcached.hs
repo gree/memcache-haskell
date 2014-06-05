@@ -15,6 +15,7 @@ import qualified Data.HashTable.IO as H
 import Control.Monad
 import Control.Concurrent hiding (yield)
 import Data.Word
+import Control.Monad.Trans.Resource
 
 import Network.Memcache.Op
 import Network.Memcache.Response
@@ -28,18 +29,18 @@ main :: IO ()
 main = do
   ht <- H.new :: IO (HashTable Key Value)
   htVar <- newMVar ht
-  runResourceT $ do
-    runTCPServer (serverSettings 11211 HostAny) $ \appData -> do
+  runTCPServer (serverSettings 11211 "*") $ \appData -> do
+    runResourceT $ do
       (appSource appData)
         $$ getOpText
         =$ process htVar
         =$ putResponseText
         =$ (appSink appData)
 
-process :: (MonadResource m, MonadIO m) => MVar (HashTable Key Value) -> ConduitM (Either BS.ByteString Op) Response m ()
+process :: MVar (HashTable Key Value) -> ConduitM (Either BS.ByteString Op) Response (ResourceT IO) ()
 process htVar = loop
   where
-    loop :: (MonadResource m, MonadIO m) => ConduitM (Either t Op) Response m ()
+    loop :: ConduitM (Either t Op) Response (ResourceT IO) ()
     loop = do
       meOp <- await
       case meOp of
