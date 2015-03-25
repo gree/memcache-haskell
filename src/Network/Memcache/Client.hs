@@ -9,8 +9,8 @@ module Network.Memcache.Client (
     Client
   , StatsList
   , Nodekey
-  , Key
-  , Value
+  , Key(..)
+  , Value(..)
   , openClient
   , closeClient
   , clientNodekey
@@ -21,9 +21,13 @@ module Network.Memcache.Client (
   , forEachClient
   -- Query Operations
   , set
+  , setEx
   , cas
+  , casEx
   , add
+  , addEx
   , replace
+  , replaceEx
   , get
   , gets
   , delete
@@ -178,14 +182,29 @@ set :: (MonadIO m, Key k, Value v)
        -> m Bool -- ^ true if the value has been stored
 set = set' SetOp
 
--- a helper function
+{- | Set an item with exptime
+-}
+setEx :: (MonadIO m, Key k, Value v)
+       => Client -- ^ a client handler
+       -> k      -- ^ a key
+       -> v      -- ^ a value
+       -> Word64 -- ^ exptime
+       -> m Bool -- ^ true if the value has been stored
+setEx = opEx SetOp
+
+-- a helper function without exptime
 set' :: (MonadIO m, Key k, Value v) => (BS.ByteString -> Word32 -> Word64 -> Word64 -> BS.ByteString -> [Option] -> Op) -> Client -> k -> v -> m Bool
-set' op client key0 value0 = do
+set' op client key0 value0 = opEx op client key0 value0 0
+
+
+-- a helper function with exptime
+opEx :: (MonadIO m, Key k, Value v) => (BS.ByteString -> Word32 -> Word64 -> Word64 -> BS.ByteString -> [Option] -> Op) -> Client -> k -> v -> Word64 -> m Bool
+opEx op client key0 value0 exptime = do
   let socket = clientSocket client
       key = toBS key0
       value = serializeValue value0
   resp <- liftIO $ do
-    send socket $ op key 0 0 (fromIntegral $ BS.length value) value []
+    send socket $ op key 0 exptime (fromIntegral $ BS.length value) value []
     recv socket :: IO (Maybe Response)
   return (resp == Just Stored)
 
@@ -199,6 +218,17 @@ cas :: (MonadIO m, Key k, Value v)
        -> m Bool -- ^ true if the value has been stored
 cas client key value version = set' (\k f e b v o -> CasOp k f e b version v o) client key value
 
+{- | Cas an item with exptime
+-}
+casEx :: (MonadIO m, Key k, Value v)
+       => Client -- ^ a client handler
+       -> k      -- ^ a key
+       -> v      -- ^ a value
+       -> Word64 -- ^ a version number got by gets command
+       -> Word64 -- ^ exptime
+       -> m Bool -- ^ true if the value has been stored
+casEx client key value version exptime = opEx (\k f e b v o -> CasOp k f e b version v o) client key value exptime
+
 {- | Add an item
 -}
 add :: (MonadIO m, Key k, Value v)
@@ -208,6 +238,16 @@ add :: (MonadIO m, Key k, Value v)
        -> m Bool
 add = set' AddOp
 
+{- | Add an item with exptime
+-}
+addEx :: (MonadIO m, Key k, Value v)
+       => Client -- ^ a client handler
+       -> k      -- ^ a key
+       -> v      -- ^ a value
+       -> Word64 -- ^ exptime
+       -> m Bool
+addEx = opEx AddOp
+
 {- | Replace an item
 -}
 replace :: (MonadIO m, Key k, Value v)
@@ -216,6 +256,16 @@ replace :: (MonadIO m, Key k, Value v)
            -> v      -- ^ a value
            -> m Bool -- ^ true if the value has been stored
 replace = set' ReplaceOp
+
+{- | Replace an item with exptime
+-}
+replaceEx :: (MonadIO m, Key k, Value v)
+           => Client -- ^ a client handler
+           -> k      -- ^ a key
+           -> v      -- ^ a value
+           -> Word64 -- ^ exptime
+           -> m Bool -- ^ true if the value has been stored
+replaceEx = opEx ReplaceOp
 
 {- | Get an item
 -}
