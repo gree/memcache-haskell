@@ -3,21 +3,21 @@ memcache-haskell
 
 [![Hackage version](https://img.shields.io/hackage/v/memcache-haskell.svg?style=flat)](https://hackage.haskell.org/package/memcache-haskell)  [![Build Status](https://travis-ci.org/gree/memcache-haskell.png?branch=master)](https://travis-ci.org/gree/memcache-haskell)
 
-This package is a memcache protocol library for server and client application.
+This package is a memcache protocol library for server and client applications.
 
 ## Getting started
 
-Install this from Hackage.
+Install from Hackage.
 
     cabal update && cabal install memcache-haskell
 
-## Usage as Client library
+## Usage
 
-1. At first, call `openCLient` with `ip-address:port` of memcache-server. The function returns a handle.
-2. When you set or get a data for memcache server, call `set` or `get` with the handle.
-3. Finally call `closeClient`.
+1. Call `openClient` with `ip-address:port` of memcache-server to obtain a handle.
+2. To set or get a data on the memcache server, call `set` or `get` with the handle.
+3. Finally call `closeClient` after you are done.
 
-Sample is below.
+Example:
 
 ```
 main :: IO ()
