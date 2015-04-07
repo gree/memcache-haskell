@@ -1,7 +1,8 @@
 Name:           memcache-haskell
 Version:        0.0.10
 Description:    Memcache procotol library
-License:        OtherLicense
+License:        MIT
+license-file:   LICENSE
 Author:         Kiyoshi Ikehara
 Maintainer:     Kiyoshi Ikehara
 Copyright:      (c) 2015 GREE, Inc.
