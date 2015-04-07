@@ -1,9 +1,13 @@
 memcache-haskell
 ================
 
-[![Hackage version](https://img.shields.io/hackage/v/memcache-haskell.svg?style=flat)](https://hackage.haskell.org/package/memcache-haskell)  [![Build Status](https://travis-ci.org/gree/memcache-haskell.png?branch=master)](https://travis-ci.org/gree/memcache-haskell)
+[![Hackage version](https://img.shields.io/hackage/v/memcache-haskell.svg?style=flat)](https://hackage.haskell.org/package/memcache-haskell)  [![Build Status](https://travis-ci.org/gree/memcache-haskell.png?branch=master)](https://travis-ci.org/gree/memcache-haskell) [![Coverage Status](https://coveralls.io/repos/gree/memcache-haskell/badge.png)](https://coveralls.io/r/gree/memcache-haskell)
 
 This package is a memcache protocol library for server and client applications.
+
+Main purpose of this library is making a server itself.
+
+This does not support consistent hashing  and any other functions like ["libmemcached"](http://libmemcached.org/libMemcached.html).
 
 ## Getting started
 
