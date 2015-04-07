@@ -4,19 +4,15 @@
 
 module Main where
 
-import Data.Monoid
 import Data.Char
-import Data.Maybe
-import Data.List
 import Data.Word
 import qualified Data.ByteString.Char8 as BS
-import Control.Monad
-import Test.Framework
+--import Test.Framework
 import Test.Framework.TH
-import Test.Framework.Providers.HUnit
+--import Test.Framework.Providers.HUnit
 import Test.Framework.Providers.QuickCheck2
 import Test.QuickCheck
-import Test.QuickCheck.Arbitrary
+--import Test.QuickCheck.Arbitrary
 
 import Network.Memcache.Class (toChunks)
 import Network.Memcache.Op
@@ -46,6 +42,7 @@ instance Arbitrary PrintableString where
 instance Arbitrary Option where
   arbitrary = oneof [ return Noreply ]
 
+printableNonSpace :: String -> Bool
 printableNonSpace xs = not (null xs) && (and $ map (\c -> isPrint c && c /= ' ') xs)
 
 main :: IO ()
@@ -231,7 +228,7 @@ prop_toChunks_Value key flag value version = chunk2string (toChunks $ R.Value ke
     len = fromIntegral $ BS.length value
     key' = getKey key
     resp = "VALUE " ++ BS.unpack key' ++ " " ++ show flag ++ " "++ show len ++ showVersion version ++ ln ++ BS.unpack value ++ ln
-    showVersion version = case version of
+    showVersion version' = case version' of
       Just v -> " " ++ show v
       Nothing -> ""
 
@@ -246,7 +243,7 @@ prop_parseResponseHeader_Value key flags len version = response == Just (R.Value
     response = R.parseResponseHeader input
     input = BS.pack $ "VALUE " ++ BS.unpack key' ++ " " ++ show flags ++ " " ++ show len ++ versionPart version
     key' = getKey key
-    versionPart version = case version of
+    versionPart version' = case version' of
       Just v -> " " ++ show v
       Nothing -> ""
 
@@ -268,10 +265,13 @@ prop_parseResponseHeader_Code code = R.parseResponseHeader (BS.pack $ show code)
 
 ----------------------------------------------------------------
 
+chunk2string :: [BS.ByteString] -> String
 chunk2string = BS.unpack . BS.concat
 
+ln :: String
 ln = "\r\n"
 
+showOptions :: Show a => [a] -> String
 showOptions options = (concat $ map (\o -> " " ++ show o) options)
 
 parseOpHeader_SetOp :: String -> (BS.ByteString -> Word32 -> Word64 -> BytesT -> ValueT -> [Option] -> Op) -> Key -> Word32 -> Word64 -> [Option] -> ValueT -> Bool

@@ -4,11 +4,22 @@ Description:    Memcache procotol library
 License:        OtherLicense
 Author:         Kiyoshi Ikehara
 Maintainer:     Kiyoshi Ikehara
-Copyright:      (c) 2013 GREE, Inc.
+Copyright:      (c) 2015 GREE, Inc.
 Build-Type:     Simple
 Cabal-Version:  >=1.8
 Description:
     A memcache protocol library for client and server applications.
+
+
+bug-reports:      https://github.com/gree/memcache-haskell/issues
+
+extra-source-files:
+  ChangeLog.md
+  README.md
+
+source-repository head
+  type:           git
+  location:       https://github.com/gree/memcache-haskell.git
 
 Flag sample
   Description: Build sample programs
