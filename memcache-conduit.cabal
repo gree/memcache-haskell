@@ -1,12 +1,27 @@
 Name:           memcache-conduit
 Version:        0.0.3
-License:        OtherLicense
+License:        MIT
+license-file:   LICENSE
 Author:         Kiyoshi Ikehara
 Maintainer:     Kiyoshi Ikehara
-Copyright:      (c) 2013 GREE, Inc.
+Copyright:      (c) 2015 GREE, Inc.
 Build-Type:     Simple
 Cabal-Version:  >=1.8
 Description:    This package provides conduit functions for memcache protocol.
+
+bug-reports:      https://github.com/gree/memcache-haskell/issues
+
+extra-source-files:
+  ChangeLog.md
+  README.md
+
+source-repository head
+  type:           git
+  location:       https://github.com/gree/memcache-haskell.git
+
+Flag sample
+  Description: Build sample programs
+  Default: False
 
 Library
   Ghc-Options:     -O2 -Wall
@@ -27,6 +42,10 @@ Library
 
 
 Executable memcache-sample-hemcached
+  if flag(sample)
+    Buildable: True
+  else
+    Buildable: False
   Ghc-Options:     -threaded -O2 -Wall -rtsopts
   Extra-Libraries: 
   Build-Depends:   base       >= 4 && < 5
@@ -46,6 +65,10 @@ Executable memcache-sample-hemcached
   Extensions:      DeriveDataTypeable
 
 Executable memcache-sample-proxy
+  if flag(sample)
+    Buildable: True
+  else
+    Buildable: False
   Ghc-Options:     -threaded -O2 -Wall -rtsopts
   Extra-Libraries: 
   Build-Depends:   base       >= 4 && < 5

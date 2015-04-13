@@ -1,25 +1,35 @@
-
 memcache-conduit
 ================
+
+[![Hackage version](https://img.shields.io/hackage/v/memcache-conduit.svg?style=flat)](https://hackage.haskell.org/package/memcache-conduit)
+
+This package provides conduit functions for memcache protocol.
+
+For detail, please see '''hemcached''' sample code (sample/hemcached.hs).
+
 
 Installation
 ------------
 
-    > git clone https://github.com/gree/memcache-haskell.git
-    > git clone https://github.com/gree/memcache-conduit.git
-    > cabal install memcache-haskell/ memcache-conduit/
+Install with sample(hemcached)
+
+    > cabal install -f sample memcache-haskell memcache-conduit
+
+Install without sample(hemcached)
+
+    > cabal install memcache-haskell memcache-conduit
 
 Sample code
 -----------
 
-### hemcached
+### hemcached(memcache-sample-hemcached)
 
-hemcached is a simple memcached server to demonstrate how to use the memcache conduit functions.
+hemcached(memcache-sample-hemcached) is a simple memcached server to demonstrate how to use the memcache conduit functions.
 (expiration and eviction are not implemented.)
 
 1) Launch hemcached
 
-    > ~/.cabal/bin/hemcached
+    > ~/.cabal/bin/memcache-sample-hemcached
 
 2) Open another terminal window
 
@@ -38,5 +48,15 @@ hemcached is a simple memcached server to demonstrate how to use the memcache co
     value
     end
 
-If you want to know further information, please see the file "main/hemcached.hs" in this repository.
+If you want to know further information, please see the file "sample/hemcached.hs" in this repository.
 
+## Contributors
+
+* Kiyoshi Ikehara
+* Junji Hashimoto
+
+## License
+
+See [LICENSE](LICENSE).
+
+Copyright © Gree, Inc. All Rights Reserved.
