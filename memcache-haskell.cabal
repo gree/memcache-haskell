@@ -1,11 +1,12 @@
 Name:           memcache-haskell
-Version:        0.0.10
-Description:    Memcache procotol library
+Version:        0.0.10.1
+Synopsis:       Memcache procotol library
 License:        MIT
 license-file:   LICENSE
 Author:         Kiyoshi Ikehara
 Maintainer:     Kiyoshi Ikehara
 Copyright:      (c) 2015 GREE, Inc.
+Category:       Network
 Build-Type:     Simple
 Cabal-Version:  >=1.8
 Description:
@@ -62,7 +63,7 @@ Executable memcache-sample-client
                  , resourcet
                  , mtl
                  , hashtables
-                 , network-conduit
+                 , conduit-extra
                  , memcache-haskell
   Hs-source-dirs:  sample
   Main-is:         sample-client.hs
@@ -83,7 +84,7 @@ Executable memcache-sample-retrieval
                  , resourcet
                  , mtl
                  , hashtables
-                 , network-conduit
+                 , conduit-extra
                  , memcache-haskell
   Hs-source-dirs:  sample
   Main-is:         sample-retrieval.hs
@@ -95,7 +96,7 @@ Test-Suite test-memcache
                  , bytestring
                  , network >= 2.3.2
                  , split
-                 , QuickCheck == 2.5.1.1
+                 , QuickCheck
                  , HUnit
                  , test-framework
                  , test-framework-th
