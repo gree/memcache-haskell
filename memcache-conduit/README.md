@@ -1,8 +1,6 @@
 memcache-conduit
 ================
 
-[![Hackage version](https://img.shields.io/hackage/v/memcache-conduit.svg?style=flat)](https://hackage.haskell.org/package/memcache-conduit)
-
 This package provides conduit functions for memcache protocol.
 
 For detail, please see '''hemcached''' sample code (sample/hemcached.hs).

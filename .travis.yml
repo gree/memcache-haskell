@@ -12,11 +12,12 @@ before_install:
 
 install:
   - cabal-1.22 update
-  - cabal-1.22 install -j --only-dep  --enable-tests --force-reinstalls
 
 script:
-  - cabal-1.22 configure --enable-tests --enable-library-coverage && cabal-1.22 build && cabal-1.22 test
+  - cd memcache-haskell
+  - cabal-1.22 install -j --only-dep  --enable-tests --force-reinstalls
+  - cabal-1.22 configure --enable-tests && cabal-1.22 build && cabal-1.22 test
+  - cd ../memcache-conduit
+  - cabal-1.22 install -j --only-dep  --enable-tests --force-reinstalls
+  - cabal-1.22 configure --enable-tests && cabal-1.22 build && cabal-1.22 test
 
-after_script:
-  - cabal-1.22 install hpc-coveralls --bindir=$HOME/.cabal/bin/
-  - $HOME/.cabal/bin/hpc-coveralls --exclude-dir=test test-memcache
